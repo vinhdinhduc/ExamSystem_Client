@@ -1,0 +1,30 @@
+@mixin card {
+    background: $color-surface;
+    border: 1px solid $color-border;
+    border-radius: $radius-lg;
+    box-shadow: $shadow-soft;
+}
+
+@mixin page-width {
+    max-width: 980px;
+    margin: 0 auto;
+}
+
+@mixin button-base {
+    border: 0;
+    border-radius: $radius-md;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+        transform 0.15s ease,
+        opacity 0.15s ease;
+
+    &:hover {
+        transform: translateY(-1px);
+    }
+
+    &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+}

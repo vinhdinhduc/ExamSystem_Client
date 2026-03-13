@@ -1,0 +1,18 @@
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.card {
+    @include card;
+    padding: 1rem;
+}
+
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+}
+
+.loading-spinner {
+    padding: 0.8rem;
+    color: $color-muted;
+}

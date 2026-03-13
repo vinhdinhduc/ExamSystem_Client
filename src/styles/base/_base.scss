@@ -1,0 +1,33 @@
+body {
+    font-family: $font-body;
+    color: $color-text;
+    background:
+        radial-gradient(circle at 10% -10%, #d8ecff 0%, transparent 35%),
+        radial-gradient(circle at 90% 0%, #daf6eb 0%, transparent 30%), $color-bg;
+}
+
+h1,
+h2,
+h3,
+h4 {
+    font-family: $font-heading;
+    margin: 0 0 0.75rem;
+}
+
+p {
+    margin: 0 0 0.75rem;
+    color: $color-muted;
+}
+
+.error-text {
+    color: $color-danger;
+}
+
+.ok-text {
+    color: $color-secondary;
+}
+
+.muted-link {
+    color: $color-muted;
+    font-size: 0.9rem;
+}

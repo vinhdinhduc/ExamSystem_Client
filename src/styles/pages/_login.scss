@@ -1,0 +1,23 @@
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.login-page {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+}
+
+.login-card {
+    @include card;
+    width: min(420px, 100%);
+    padding: 1.4rem;
+    display: grid;
+    gap: 0.65rem;
+
+    input {
+        border: 1px solid $color-border;
+        border-radius: $radius-md;
+        padding: 0.65rem;
+    }
+}

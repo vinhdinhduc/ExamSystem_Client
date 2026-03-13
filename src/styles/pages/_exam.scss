@@ -1,0 +1,32 @@
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.exam-page {
+    @include page-width;
+}
+
+.exam-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.timer-chip {
+    padding: 0.4rem 0.7rem;
+    border-radius: 999px;
+    background: #ffe6b8;
+    color: #745318;
+    font-weight: 700;
+}
+
+.options-grid {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.option-row {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+}

@@ -1,0 +1,32 @@
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.btn {
+    @include button-base;
+    padding: 0.65rem 1rem;
+}
+
+.btn-full {
+    width: 100%;
+}
+
+.btn-primary {
+    background: $color-primary;
+    color: #fff;
+}
+
+.btn-secondary {
+    background: $color-secondary;
+    color: #fff;
+}
+
+.btn-outline {
+    border: 1px solid $color-border;
+    background: transparent;
+    color: $color-text;
+}
+
+.btn-danger {
+    background: $color-danger;
+    color: #fff;
+}

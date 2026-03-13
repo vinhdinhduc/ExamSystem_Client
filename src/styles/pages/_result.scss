@@ -1,0 +1,11 @@
+@use "../mixins" as *;
+
+.result-page {
+    @include page-width;
+}
+
+.review-list {
+    display: grid;
+    gap: 0.8rem;
+    margin-top: 0.8rem;
+}
