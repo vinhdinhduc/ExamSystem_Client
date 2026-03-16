@@ -1,0 +1,477 @@
+@use "sass:color";
+@use "../variables" as *;
+@use "../mixins" as *;
+
+// ── Exam Timer ───────────────────────────────────────────────
+
+.exam-timer {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.55rem 1rem;
+    background: rgba($color-secondary, 0.1);
+    border: 1.5px solid rgba($color-secondary, 0.2);
+    border-radius: $radius-md;
+    color: color.adjust($color-secondary, $lightness: -8%);
+    transition:
+        background 0.3s,
+        border-color 0.3s,
+        color 0.3s;
+
+    &__icon {
+        font-size: 1.3rem;
+    }
+
+    &__label {
+        font-size: 0.72rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        display: block;
+    }
+
+    &__value {
+        font-size: 1.25rem;
+        font-weight: 800;
+        font-family: $font-heading;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+        display: block;
+    }
+
+    &--urgent {
+        background: rgba($color-danger, 0.1);
+        border-color: rgba($color-danger, 0.3);
+        color: $color-danger;
+        animation: pulse-urgent 1s ease-in-out infinite;
+    }
+}
+
+@keyframes pulse-urgent {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.75;
+    }
+}
+
+// ── Question Palette ─────────────────────────────────────────
+
+.question-palette {
+    @include card;
+    padding: 1rem;
+
+    &__header {
+        margin-bottom: 0.75rem;
+    }
+
+    &__title {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: $color-text;
+        margin: 0 0 0.2rem;
+    }
+
+    &__meta {
+        font-size: 0.75rem;
+        color: $color-muted;
+        margin: 0 0 0.75rem;
+    }
+
+    // Grid of number buttons
+    display: flex;
+    flex-direction: column;
+
+    // The items end up directly inside after header
+    &__item {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: $radius-md;
+        font-size: 0.8rem;
+        font-weight: 700;
+        cursor: pointer;
+        border: 1.5px solid $color-border;
+        background: $color-surface;
+        color: $color-muted;
+        transition: all 0.12s;
+        flex-shrink: 0;
+
+        &--answered {
+            background: rgba($color-secondary, 0.12);
+            border-color: $color-secondary;
+            color: color.adjust($color-secondary, $lightness: -10%);
+        }
+
+        &--unanswered {
+            background: $color-surface;
+            border-color: $color-border;
+            color: $color-muted;
+        }
+
+        &--current {
+            background: $color-primary;
+            border-color: $color-primary;
+            color: #fff;
+            box-shadow: 0 2px 8px rgba($color-primary, 0.4);
+        }
+
+        &:hover:not(&--current) {
+            border-color: $color-primary;
+            color: $color-primary;
+        }
+    }
+}
+
+// grid wrapper for the palette items
+.question-palette__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 36px);
+    gap: 0.4rem;
+}
+
+// Legend
+.question-palette__legend {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid $color-border;
+    flex-wrap: wrap;
+}
+
+.question-palette__legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+    color: $color-muted;
+}
+
+// ── Question Card ────────────────────────────────────────────
+
+.question-card {
+    @include card;
+    padding: 1.5rem;
+
+    &__meta {
+        display: flex;
+        gap: 0.4rem;
+        margin-bottom: 0.75rem;
+    }
+
+    &__title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: $color-text;
+        margin: 0 0 1.1rem;
+        line-height: 1.55;
+    }
+
+    &__image {
+        max-width: 100%;
+        border-radius: $radius-md;
+        margin-bottom: 1rem;
+    }
+
+    &__answers {
+        display: flex;
+        flex-direction: column;
+        gap: 0.55rem;
+    }
+
+    &__answer {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.7rem 1rem;
+        border: 1.5px solid $color-border;
+        border-radius: $radius-md;
+        cursor: pointer;
+        transition: all 0.12s;
+
+        &:hover {
+            border-color: $color-primary;
+            background: rgba($color-primary, 0.03);
+        }
+
+        input[type="radio"],
+        input[type="checkbox"] {
+            flex-shrink: 0;
+            accent-color: $color-primary;
+            width: 16px;
+            height: 16px;
+        }
+    }
+
+    &__answer-text {
+        font-size: 0.9rem;
+        color: $color-text;
+        line-height: 1.45;
+    }
+
+    &__answer--selected {
+        border-color: $color-primary;
+        background: rgba($color-primary, 0.06);
+    }
+}
+
+// ── Question Preview ─────────────────────────────────────────
+
+.question-preview {
+    @include card;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 0.75rem;
+
+    &__badges {
+        display: flex;
+        gap: 0.4rem;
+        margin-bottom: 0.6rem;
+    }
+
+    &__title {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: $color-text;
+        margin: 0 0 0.75rem;
+        line-height: 1.5;
+    }
+
+    &__options {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    &__option {
+        padding: 0.45rem 0.75rem;
+        border-radius: $radius-md;
+        border: 1px solid $color-border;
+        font-size: 0.87rem;
+        color: $color-text;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        &::before {
+            content: "○";
+            color: $color-muted;
+            font-size: 0.8rem;
+        }
+    }
+
+    &__option--correct {
+        border-color: $color-secondary;
+        background: rgba($color-secondary, 0.08);
+        color: color.adjust($color-secondary, $lightness: -15%);
+
+        &::before {
+            content: "✓";
+            color: $color-secondary;
+            font-weight: 700;
+        }
+    }
+
+    &__explanation {
+        margin-top: 0.75rem;
+        padding: 0.6rem 0.85rem;
+        background: rgba($color-primary, 0.06);
+        border-left: 3px solid $color-primary;
+        border-radius: 0 $radius-md $radius-md 0;
+        font-size: 0.83rem;
+        color: $color-text;
+    }
+}
+
+// ── Question Bank ────────────────────────────────────────────
+
+.question-bank {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+
+    @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+    }
+
+    &__column {
+        @include card;
+        padding: 1rem;
+        min-height: 400px;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        overflow-y: auto;
+        max-height: 600px;
+
+        &--active {
+            border-color: rgba($color-primary, 0.3);
+        }
+    }
+
+    &__column-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        padding-bottom: 0.6rem;
+        border-bottom: 1px solid $color-border;
+    }
+
+    &__title {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: $color-text;
+        margin: 0 0 0.15rem;
+    }
+
+    &__meta {
+        font-size: 0.75rem;
+        color: $color-muted;
+        margin: 0;
+    }
+
+    &__count {
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 0.15rem 0.45rem;
+        border-radius: 999px;
+        background: rgba($color-primary, 0.1);
+        color: $color-primary;
+        flex-shrink: 0;
+    }
+
+    &__item {
+        border: 1.5px solid $color-border;
+        border-radius: $radius-md;
+        padding: 0.65rem 0.85rem;
+        background: $color-surface;
+        cursor: grab;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.5rem;
+        transition:
+            box-shadow 0.12s,
+            border-color 0.12s;
+        flex-shrink: 0;
+
+        &:hover {
+            border-color: $color-primary;
+            box-shadow: 0 2px 8px rgba($color-primary, 0.12);
+        }
+        &:active {
+            cursor: grabbing;
+        }
+    }
+
+    &__item-head {
+        display: flex;
+        gap: 0.5rem;
+        flex: 1;
+        min-width: 0;
+    }
+
+    &__item-icon {
+        color: $color-muted;
+        font-size: 1.1rem;
+        flex-shrink: 0;
+        margin-top: 0.1rem;
+    }
+
+    &__item-title {
+        font-size: 0.83rem;
+        color: $color-text;
+        font-weight: 500;
+        margin: 0 0 0.3rem;
+        overflow: hidden;
+        display: -webkit-box;
+        line-clamp: 2;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+    }
+
+    &__item-badges {
+        display: flex;
+        gap: 0.3rem;
+        flex-wrap: wrap;
+    }
+
+    &__item-index {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: $color-muted;
+        flex-shrink: 0;
+        min-width: 18px;
+    }
+
+    &__cta {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: $color-primary;
+        font-size: 1.2rem;
+        display: flex;
+        align-items: center;
+        padding: 0.1rem;
+        flex-shrink: 0;
+        transition: color 0.12s;
+
+        &:hover {
+            color: color.adjust($color-primary, $lightness: -15%);
+        }
+    }
+}
+
+// ── Assign Exam Modal ────────────────────────────────────────
+
+.assign-exam-modal {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+
+    &__grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+
+        @media (max-width: 540px) {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    &__field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+
+    &__label {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: $color-text;
+
+        svg {
+            font-size: 1rem;
+            color: $color-primary;
+        }
+    }
+
+    &__actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.6rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid $color-border;
+    }
+}

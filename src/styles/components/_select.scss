@@ -1,0 +1,84 @@
+@use "../variables" as *;
+
+.ui-select {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+
+    &__search-wrap {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        border: 1.5px solid $color-border;
+        border-radius: $radius-md;
+        padding: 0.45rem 0.75rem;
+        background: $color-surface;
+
+        &:focus-within {
+            border-color: $color-primary;
+            box-shadow: 0 0 0 3px rgba($color-primary, 0.1);
+        }
+    }
+
+    &__search-icon {
+        color: $color-muted;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+
+    &__search {
+        border: none;
+        outline: none;
+        font-size: 0.88rem;
+        width: 100%;
+        background: transparent;
+        color: $color-text;
+    }
+
+    &__control-wrap {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    &__control {
+        appearance: none;
+        border: 1.5px solid $color-border;
+        border-radius: $radius-md;
+        padding: 0.6rem 2.2rem 0.6rem 0.85rem;
+        font-size: 0.93rem;
+        font-family: inherit;
+        color: $color-text;
+        background: $color-surface;
+        transition:
+            border-color 0.15s,
+            box-shadow 0.15s;
+        width: 100%;
+        cursor: pointer;
+
+        &:focus {
+            outline: none;
+            border-color: $color-primary;
+            box-shadow: 0 0 0 3px rgba($color-primary, 0.14);
+        }
+
+        &--multiple {
+            padding-right: 0.85rem;
+            min-height: 90px;
+        }
+    }
+
+    &__arrow {
+        position: absolute;
+        right: 0.75rem;
+        pointer-events: none;
+        color: $color-muted;
+        font-size: 1rem;
+    }
+
+    &__meta {
+        font-size: 0.77rem;
+        color: $color-muted;
+        padding: 0.2rem 0;
+    }
+}

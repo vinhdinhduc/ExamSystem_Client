@@ -1,146 +1,174 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSelector } from "react-redux";
+import { useCallback, useEffect, useRef } from "react";
+import {
+  IoArrowBackOutline,
+  IoArrowForwardOutline,
+  IoCheckmarkCircleOutline,
+} from "react-icons/io5";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import Button from "../../components/ui/Button";
-import { useAppDispatch } from "../../hooks/reduxHooks";
+import Card from "../../components/ui/Card";
+import LoadingSpinner from "../../components/common/LoadingSpinner";
+import ExamTimer from "../../components/exam/ExamTimer";
+import QuestionCard from "../../components/exam/QuestionCard";
+import QuestionPalette from "../../components/exam/QuestionPalette";
+import { useAppDispatch, useAppSelector } from "../../hooks/reduxHooks";
 import { fetchExamById } from "../../redux/slices/examSlice";
+import { fetchQuestionsByExamId } from "../../redux/slices/questionSlice";
 import {
-  fetchQuestionsByExamId,
-  resetAnswers,
-  selectAnswer,
-} from "../../redux/slices/questionSlice";
-import { submitExam } from "../../redux/slices/resultSlice";
+  autosaveSession,
+  clearSessionState,
+  setCurrentQuestion,
+  setRemainingTime,
+  setSessionAnswer,
+  startExamSession,
+  submitExamSession,
+} from "../../redux/slices/examSessionSlice";
 import type { RootState } from "../../redux/store";
-import type { ExamState } from "../../types/exam";
-import type { ResultState } from "../../types/result";
 
 const DoExamPage = () => {
-  const select = useSelector.withTypes<RootState>();
-  const { id } = useParams();
+  const { id = "" } = useParams();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
-  const examId = Number(id);
-  const { examDetail } = select((state): ExamState => state.exam);
-  const { questions, selectedAnswers, loading, error } = select(
-    (state) => state.question,
+  const { examDetail } = useAppSelector((state: RootState) => state.exam);
+  const { questions, loading: questionsLoading } = useAppSelector(
+    (state: RootState) => state.question,
   );
-  const { loading: submitting } = select((state): ResultState => state.result);
+  const { sessionId, answers, currentQuestion, remainingTime, submitting } =
+    useAppSelector((state: RootState) => state.examSession);
 
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const hasAutoSubmitted = useRef(false);
+  const autosaveDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Bootstrap session on mount
   useEffect(() => {
-    if (Number.isNaN(examId)) {
-      return;
-    }
-
+    if (!id) return;
     hasAutoSubmitted.current = false;
-
-    void dispatch(fetchExamById(examId));
-    void dispatch(fetchQuestionsByExamId(examId));
-    dispatch(resetAnswers());
-  }, [dispatch, examId]);
-
-  const totalDurationSeconds = (examDetail?.durationMinutes ?? 0) * 60;
-  const timeLeft = Math.max(totalDurationSeconds - elapsedSeconds, 0);
+    void dispatch(fetchExamById(id));
+    void dispatch(fetchQuestionsByExamId(id));
+    void dispatch(startExamSession(id));
+    return () => {
+      dispatch(clearSessionState());
+    };
+  }, [dispatch, id]);
 
   const handleSubmit = useCallback(async () => {
-    if (!questions.length || Number.isNaN(examId)) {
-      return;
+    if (!sessionId || hasAutoSubmitted.current) return;
+    hasAutoSubmitted.current = true;
+    const result = await dispatch(submitExamSession(sessionId));
+    if (submitExamSession.fulfilled.match(result)) {
+      toast.success("Nộp bài thành công!");
+      navigate(`/result/${result.payload.id}`, { replace: true });
+    } else {
+      toast.error("Không thể nộp bài, vui lòng thử lại.");
     }
+  }, [dispatch, navigate, sessionId]);
 
-    const answers = questions
-      .filter((question) => selectedAnswers[question.id] !== undefined)
-      .map((question) => ({
-        questionId: question.id,
-        selectedOptionId: selectedAnswers[question.id],
-      }));
+  // Debounce autosave 500ms
+  const handleAnswer = (questionId: string, selectedIds: number[]) => {
+    dispatch(setSessionAnswer({ questionId, answerIds: selectedIds }));
+    if (autosaveDebounce.current) clearTimeout(autosaveDebounce.current);
+    autosaveDebounce.current = setTimeout(() => {
+      void dispatch(autosaveSession());
+    }, 500);
+  };
 
-    const result = await dispatch(submitExam({ examId, answers }));
-    if (submitExam.fulfilled.match(result)) {
-      toast.success("Exam submitted successfully");
-      dispatch(resetAnswers());
-      navigate(`/result/${result.payload.resultId}`, { replace: true });
-      return;
-    }
+  const answeredMap: Record<number, boolean> = {};
+  questions.forEach((q, idx) => {
+    answeredMap[idx] = (answers[q.id]?.length ?? 0) > 0;
+  });
+  const answeredCount = Object.values(answeredMap).filter(Boolean).length;
+  const progressPct = questions.length
+    ? Math.round((answeredCount / questions.length) * 100)
+    : 0;
 
-    toast.error(result.payload ?? "Unable to submit exam");
-  }, [dispatch, examId, navigate, questions, selectedAnswers]);
+  const currentQ = questions[currentQuestion] ?? null;
 
-  useEffect(() => {
-    if (!totalDurationSeconds) {
-      return;
-    }
-
-    const timer = window.setInterval(() => {
-      setElapsedSeconds((previous) => previous + 1);
-    }, 1000);
-
-    return () => window.clearInterval(timer);
-  }, [totalDurationSeconds]);
-
-  useEffect(() => {
-    if (timeLeft <= 0) {
-      if (questions.length > 0 && !hasAutoSubmitted.current) {
-        hasAutoSubmitted.current = true;
-        void handleSubmit();
-      }
-    }
-  }, [handleSubmit, questions.length, timeLeft]);
-
-  const timerText = useMemo(() => {
-    const minutes = Math.floor(Math.max(timeLeft, 0) / 60);
-    const seconds = Math.max(timeLeft, 0) % 60;
-    return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-  }, [timeLeft]);
-
-  if (loading) {
-    return <p>Loading questions...</p>;
-  }
+  if (questionsLoading || !sessionId) return <LoadingSpinner />;
 
   return (
-    <section className="exam-page">
-      <div className="exam-header">
-        <h2>{examDetail?.title ?? "Do Exam"}</h2>
-        <span className="timer-chip">Time Left: {timerText}</span>
+    <div className="do-exam">
+      <div className="do-exam__main">
+        <div className="do-exam__header">
+          <h1 className="do-exam__title">
+            {examDetail?.title ?? "Làm bài thi"}
+          </h1>
+          <ExamTimer
+            seconds={remainingTime}
+            onTick={(next) => dispatch(setRemainingTime(next))}
+            onExpire={() => void handleSubmit()}
+          />
+        </div>
+
+        {currentQ ? (
+          <>
+            <QuestionCard
+              question={currentQ}
+              value={answers[currentQ.id] ?? []}
+              onChange={(ids) => handleAnswer(currentQ.id, ids)}
+            />
+            <div className="do-exam__nav">
+              <Button
+                variant="outline"
+                iconLeft={<IoArrowBackOutline />}
+                disabled={currentQuestion === 0}
+                onClick={() =>
+                  dispatch(setCurrentQuestion(currentQuestion - 1))
+                }
+              >
+                Câu trước
+              </Button>
+              <span style={{ fontSize: "0.85rem", color: "#61728a" }}>
+                {currentQuestion + 1} / {questions.length}
+              </span>
+              <Button
+                iconRight={<IoArrowForwardOutline />}
+                disabled={currentQuestion === questions.length - 1}
+                onClick={() =>
+                  dispatch(setCurrentQuestion(currentQuestion + 1))
+                }
+              >
+                Câu tiếp
+              </Button>
+            </div>
+          </>
+        ) : (
+          <p className="error-text">Không có câu hỏi nào.</p>
+        )}
       </div>
 
-      {error && <p className="error-text">{error}</p>}
+      <div className="do-exam__sidebar">
+        <QuestionPalette
+          total={questions.length}
+          current={currentQuestion}
+          answeredMap={answeredMap}
+          onSelect={(idx) => dispatch(setCurrentQuestion(idx))}
+        />
 
-      {questions.map((question, index) => (
-        <article key={question.id} className="card">
-          <h3>
-            {index + 1}. {question.content}
-          </h3>
-          <div className="options-grid">
-            {question.options.map((option) => (
-              <label key={option.id} className="option-row">
-                <input
-                  type="radio"
-                  name={`question-${question.id}`}
-                  checked={selectedAnswers[question.id] === option.id}
-                  onChange={() =>
-                    dispatch(
-                      selectAnswer({
-                        questionId: question.id,
-                        selectedOptionId: option.id,
-                      }),
-                    )
-                  }
-                />
-                {option.text}
-              </label>
-            ))}
+        <Card>
+          <p className="do-exam__progress">
+            Đã trả lời: <strong>{answeredCount}</strong> / {questions.length}
+          </p>
+          <div className="do-exam__progress-bar">
+            <div
+              className="do-exam__progress-bar-fill"
+              style={{ width: `${progressPct}%` }}
+            />
           </div>
-        </article>
-      ))}
-
-      <Button onClick={() => void handleSubmit()} disabled={submitting}>
-        {submitting ? "Submitting..." : "Submit Exam"}
-      </Button>
-    </section>
+          <div style={{ marginTop: "0.75rem" }}>
+            <Button
+              fullWidth
+              iconLeft={<IoCheckmarkCircleOutline />}
+              disabled={submitting}
+              onClick={() => void handleSubmit()}
+            >
+              {submitting ? "Đang nộp..." : "Nộp bài"}
+            </Button>
+          </div>
+        </Card>
+      </div>
+    </div>
   );
 };
 

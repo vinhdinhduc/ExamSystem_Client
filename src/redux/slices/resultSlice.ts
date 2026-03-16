@@ -22,7 +22,7 @@ export const submitExam = createAsyncThunk<
     }
 })
 
-export const fetchResultById = createAsyncThunk<Result, number, { rejectValue: string }>(
+export const fetchResultById = createAsyncThunk<Result, string, { rejectValue: string }>(
     'result/fetchResultById',
     async (id, thunkApi) => {
         try {

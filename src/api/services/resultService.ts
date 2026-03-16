@@ -6,7 +6,7 @@ export const resultService = {
         const response = await axiosClient.post<SubmitExamResponse>('/api/exam-attempts', payload)
         return response.data
     },
-    getResultById: async (id: number): Promise<Result> => {
+    getResultById: async (id: string): Promise<Result> => {
         const response = await axiosClient.get<Result>(`/api/results/${id}`)
         return response.data
     },

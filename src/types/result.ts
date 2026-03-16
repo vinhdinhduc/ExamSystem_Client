@@ -1,17 +1,22 @@
 export interface ResultQuestionReview {
-    questionId: number
+    questionId: string
     questionContent: string
-    selectedOptionId: number | null
-    correctOptionId: number
+    selectedOptionIds: number[]
+    correctOptionIds: number[]
     isCorrect: boolean
+    explanation?: string | null
 }
 
 export interface Result {
-    id: number
-    examId: number
+    id: string
+    examId: string
     score: number
     totalQuestions: number
     correctAnswers: number
+    wrongAnswers: number
+    examTitle?: string
+    submittedAt?: string | null
+    showCorrectAnswer?: boolean
     reviews: ResultQuestionReview[]
 }
 
@@ -23,11 +28,11 @@ export interface ResultState {
 }
 
 export interface SubmitExamRequest {
-    examId: number
-    answers: { questionId: number; selectedOptionId: number }[]
+    examId: string
+    answers: { questionId: string; selectedOptionIds: number[] }[]
 }
 
 export interface SubmitExamResponse {
-    resultId: number
+    resultId: string
     score: number
 }
