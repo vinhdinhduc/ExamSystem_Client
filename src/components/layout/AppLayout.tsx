@@ -7,11 +7,13 @@ import {
   IoMenuOutline,
   IoPeopleOutline,
   IoSchoolOutline,
+  IoShieldCheckmarkOutline,
 } from "react-icons/io5";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import Button from "../ui/Button";
 import { useAppDispatch, useAppSelector } from "../../hooks/reduxHooks";
-import { logout } from "../../redux/slices/authSlice";
+import { logoutAsync } from "../../redux/slices/authSlice";
 import type { RootState } from "../../redux/store";
 
 const AppLayout = () => {
@@ -20,6 +22,8 @@ const AppLayout = () => {
   const { user } = useAppSelector((state: RootState) => state.auth);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const isAdmin = user?.roles?.some((r) => r.toLowerCase() === "admin") ?? false;
+
   const navigationItems = useMemo(
     () => [
       { to: "/dashboard", label: "Dashboard", icon: <IoGridOutline /> },
@@ -27,12 +31,16 @@ const AppLayout = () => {
       { to: "/exams", label: "Đề thi", icon: <IoAlbumsOutline /> },
       { to: "/exams/new", label: "Tạo đề", icon: <IoSchoolOutline /> },
       { to: "/groups", label: "Nhóm / lớp", icon: <IoPeopleOutline /> },
+      ...(isAdmin
+        ? [{ to: "/admin/roles", label: "Roles & Permissions", icon: <IoShieldCheckmarkOutline /> }]
+        : []),
     ],
-    [],
+    [isAdmin],
   );
 
-  const handleLogout = () => {
-    dispatch(logout());
+  const handleLogout = async () => {
+    await dispatch(logoutAsync());
+    toast.success("Đăng xuất thành công");
     navigate("/login", { replace: true });
   };
 

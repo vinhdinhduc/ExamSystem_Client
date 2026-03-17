@@ -1,22 +1,41 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
+import {
+  IoAddOutline,
+  IoPersonAddOutline,
+  IoTrashOutline,
+  IoPeopleOutline,
+  IoChevronDownOutline,
+  IoChevronUpOutline,
+} from "react-icons/io5";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
-import Table from "../../components/ui/Table";
+import Modal from "../../components/ui/Modal";
+import LoadingSpinner from "../../components/common/LoadingSpinner";
 import { useAppDispatch, useAppSelector } from "../../hooks/reduxHooks";
 import {
   createGroup,
   fetchGroups,
+  addGroupMember,
   removeGroupMember,
 } from "../../redux/slices/groupSlice";
 import type { RootState } from "../../redux/store";
-import type { GroupPayload } from "../../types/group";
+import type { GroupPayload, Group } from "../../types/group";
+import userService from "../../api/services/userService";
+import type { UserListDto } from "../../api/services/userService";
 
 const GroupManagementPage = () => {
   const dispatch = useAppDispatch();
-  const { groups } = useAppSelector((state: RootState) => state.group);
+  const { groups, loading } = useAppSelector((state: RootState) => state.group);
+
   const { register, handleSubmit, reset } = useForm<GroupPayload>();
+
+  const [expandedGroup, setExpandedGroup] = useState<number | null>(null);
+  const [addMemberModal, setAddMemberModal] = useState<Group | null>(null);
+  const [users, setUsers] = useState<UserListDto[]>([]);
+  const [userSearch, setUserSearch] = useState("");
+  const [addingUserId, setAddingUserId] = useState<string | null>(null);
 
   useEffect(() => {
     void dispatch(fetchGroups());
@@ -25,77 +44,254 @@ const GroupManagementPage = () => {
   const onSubmit = handleSubmit(async (payload) => {
     const result = await dispatch(createGroup(payload));
     if (createGroup.fulfilled.match(result)) {
-      toast.success("Class created");
+      toast.success("Tạo nhóm thành công");
       reset({ groupCode: "", groupName: "", description: "" });
+    } else {
+      toast.error("Không thể tạo nhóm");
     }
   });
 
+  const openAddMemberModal = async (group: Group) => {
+    setAddMemberModal(group);
+    setUserSearch("");
+    try {
+      const result = await userService.getUsers(1, 100);
+      setUsers(result?.result ?? []);
+    } catch {
+      toast.error("Không thể tải danh sách người dùng");
+    }
+  };
+
+  const handleAddMember = async (userId: string) => {
+    if (!addMemberModal) return;
+    setAddingUserId(userId);
+    const result = await dispatch(
+      addGroupMember({ groupId: addMemberModal.id, userId }),
+    );
+    if (addGroupMember.fulfilled.match(result)) {
+      toast.success("Đã thêm thành viên");
+    } else {
+      toast.error("Không thể thêm thành viên");
+    }
+    setAddingUserId(null);
+  };
+
+  const handleRemoveMember = async (groupId: number, userId: string, name: string) => {
+    if (!window.confirm(`Xóa "${name}" khỏi nhóm?`)) return;
+    const result = await dispatch(removeGroupMember({ groupId, userId }));
+    if (removeGroupMember.fulfilled.match(result)) {
+      toast.success("Đã xóa thành viên");
+    } else {
+      toast.error("Không thể xóa thành viên");
+    }
+  };
+
+  const filteredUsers = users.filter(
+    (u) =>
+      !addMemberModal?.members.some((m) => m.id === u.id) &&
+      (u.fullName.toLowerCase().includes(userSearch.toLowerCase()) ||
+        u.email.toLowerCase().includes(userSearch.toLowerCase())),
+  );
+
+  if (loading) return <LoadingSpinner />;
+
   return (
-    <section className="group-page">
-      <Card title="Group / Class Management">
+    <div className="group-page">
+      {/* Page header */}
+      <div className="page-header">
+        <div className="page-header__text">
+          <h1 className="page-header__title">Quản lý nhóm / lớp</h1>
+          <p className="page-header__subtitle">
+            Tạo và quản lý các nhóm học sinh trong hệ thống.
+          </p>
+        </div>
+      </div>
+
+      {/* Form tạo nhóm */}
+      <Card title="Tạo nhóm mới">
         <form
           className="group-page__form"
-          onSubmit={(event) => void onSubmit(event)}
+          onSubmit={(e) => void onSubmit(e)}
         >
           <input
             {...register("groupCode", { required: true })}
-            placeholder="Group code"
+            className="form-input"
+            placeholder="Mã nhóm (VD: LOP10A1)"
           />
           <input
             {...register("groupName", { required: true })}
-            placeholder="Group name"
+            className="form-input"
+            placeholder="Tên nhóm / lớp"
           />
-          <input {...register("description")} placeholder="Description" />
-          <Button type="submit">Create Class</Button>
+          <input
+            {...register("description")}
+            className="form-input"
+            placeholder="Mô tả (không bắt buộc)"
+          />
+          <Button type="submit" iconLeft={<IoAddOutline />}>
+            Tạo nhóm
+          </Button>
         </form>
       </Card>
 
-      <Card>
-        <Table
-          columns={[
-            { key: "groupCode", title: "Code" },
-            { key: "groupName", title: "Class Name" },
-            {
-              key: "members",
-              title: "Members",
-              render: (row) => `${row.members.length} members`,
-            },
-            {
-              key: "remove",
-              title: "Actions",
-              render: (row) => (
-                <div className="group-page__member-list">
-                  {row.members.map((member) => (
-                    <div key={member.id} className="group-page__member-item">
-                      <div className="group-page__avatar">
-                        {member.fullName.charAt(0)}
-                      </div>
-                      <span>{member.fullName}</span>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          void dispatch(
-                            removeGroupMember({
-                              groupId: row.id,
-                              userId: member.id,
-                            }),
-                          );
-                          toast.info("Member removed");
-                        }}
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  ))}
+      {/* Danh sách nhóm */}
+      {groups.length === 0 ? (
+        <Card>
+          <div className="group-page__empty">
+            <IoPeopleOutline />
+            <p>Chưa có nhóm nào. Hãy tạo nhóm đầu tiên.</p>
+          </div>
+        </Card>
+      ) : (
+        <div className="group-page__list">
+          {groups.map((group) => (
+            <div key={group.id} className="group-page__item">
+              {/* Group header */}
+              <div
+                className="group-page__item-header"
+                onClick={() =>
+                  setExpandedGroup(
+                    expandedGroup === group.id ? null : group.id,
+                  )
+                }
+              >
+                <div className="group-page__item-info">
+                  <div className="group-page__item-avatar">
+                    {group.groupName.charAt(0)}
+                  </div>
+                  <div>
+                    <strong>{group.groupName}</strong>
+                    <span className="group-page__item-code">
+                      {group.groupCode}
+                    </span>
+                    {group.description && (
+                      <p className="group-page__item-desc">
+                        {group.description}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              ),
-            },
-          ]}
-          data={groups}
-          rowKey={(row) => row.id}
-        />
-      </Card>
-    </section>
+                <div className="group-page__item-meta">
+                  <span className="group-page__member-count">
+                    <IoPeopleOutline /> {group.members.length} thành viên
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    iconLeft={<IoPersonAddOutline />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void openAddMemberModal(group);
+                    }}
+                  >
+                    Thêm thành viên
+                  </Button>
+                  {expandedGroup === group.id ? (
+                    <IoChevronUpOutline />
+                  ) : (
+                    <IoChevronDownOutline />
+                  )}
+                </div>
+              </div>
+
+              {/* Member list */}
+              {expandedGroup === group.id && (
+                <div className="group-page__member-list">
+                  {group.members.length === 0 ? (
+                    <p className="group-page__no-member">
+                      Chưa có thành viên nào
+                    </p>
+                  ) : (
+                    group.members.map((member) => (
+                      <div key={member.id} className="group-page__member-item">
+                        <div className="group-page__avatar">
+                          {member.fullName.charAt(0)}
+                        </div>
+                        <div className="group-page__member-info">
+                          <span className="group-page__member-name">
+                            {member.fullName}
+                          </span>
+                          <span className="group-page__member-email">
+                            {member.email}
+                          </span>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          iconLeft={<IoTrashOutline />}
+                          onClick={() =>
+                            void handleRemoveMember(
+                              group.id,
+                              member.id,
+                              member.fullName,
+                            )
+                          }
+                        >
+                          Xóa
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modal thêm thành viên */}
+      {addMemberModal && (
+        <Modal
+          open={true}
+          title={`Thêm thành viên vào "${addMemberModal.groupName}"`}
+          size="md"
+          onClose={() => setAddMemberModal(null)}
+        >
+          <div className="group-page__add-modal">
+            <input
+              className="group-page__add-input"
+              placeholder="Tìm theo tên hoặc email..."
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+              autoFocus
+            />
+            <div className="group-page__user-list">
+              {filteredUsers.length === 0 ? (
+                <p className="group-page__no-member">
+                  {userSearch
+                    ? "Không tìm thấy người dùng phù hợp"
+                    : "Tất cả người dùng đã trong nhóm"}
+                </p>
+              ) : (
+                filteredUsers.map((user) => (
+                  <div key={user.id} className="group-page__user-item">
+                    <div className="group-page__avatar">
+                      {user.fullName.charAt(0)}
+                    </div>
+                    <div className="group-page__member-info">
+                      <span className="group-page__member-name">
+                        {user.fullName}
+                      </span>
+                      <span className="group-page__member-email">
+                        {user.email}
+                      </span>
+                    </div>
+                    <Button
+                      size="sm"
+                      iconLeft={<IoPersonAddOutline />}
+                      disabled={addingUserId === user.id}
+                      onClick={() => void handleAddMember(user.id)}
+                    >
+                      {addingUserId === user.id ? "Đang thêm..." : "Thêm"}
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
   );
 };
 

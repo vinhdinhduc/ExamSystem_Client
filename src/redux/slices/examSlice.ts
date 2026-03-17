@@ -127,6 +127,9 @@ const examSlice = createSlice({
             .addCase(fetchAssignedExams.fulfilled, (state, action) => {
                 state.assignedExams = action.payload
             })
+            .addCase(fetchAssignedExams.rejected, (state) => {
+                state.assignedExams = []
+            })
             .addCase(fetchExamById.pending, (state) => {
                 state.loading = true
                 state.error = null

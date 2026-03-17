@@ -21,6 +21,7 @@ import {
   fetchExams,
   publishExam,
 } from "../../redux/slices/examSlice";
+import { fetchAssignmentTargets, assignExam } from "../../redux/slices/assignmentSlice";
 import type { RootState } from "../../redux/store";
 import type { Exam } from "../../types/exam";
 import {
@@ -35,9 +36,12 @@ const ExamListPage = () => {
   const { exams, loading, error } = useAppSelector(
     (state: RootState) => state.exam,
   );
+  const { targets, assigning } = useAppSelector(
+    (state: RootState) => state.assignment,
+  );
 
   const [search, setSearch] = useState("");
-  const [assignExam, setAssignExam] = useState<Exam | null>(null);
+  const [assignExamItem, setAssignExamItem] = useState<Exam | null>(null);
 
   useEffect(() => {
     void dispatch(fetchExams());
@@ -61,6 +65,24 @@ const ExamListPage = () => {
     const result = await dispatch(deleteExam(id));
     if (deleteExam.fulfilled.match(result)) toast.success("Đã xóa");
     else toast.error("Không thể xóa");
+  };
+
+  const openAssignModal = (exam: Exam) => {
+    setAssignExamItem(exam);
+    void dispatch(fetchAssignmentTargets());
+  };
+
+  const handleAssignSubmit = async (userIds: string[], groupIds: number[]) => {
+    if (!assignExamItem) return;
+    const result = await dispatch(
+      assignExam({ examId: assignExamItem.id, userIds, groupIds }),
+    );
+    if (assignExam.fulfilled.match(result)) {
+      toast.success("Đã phân công đề thi");
+      setAssignExamItem(null);
+    } else {
+      toast.error("Không thể phân công đề thi");
+    }
   };
 
   return (
@@ -182,7 +204,7 @@ const ExamListPage = () => {
                     size="sm"
                     variant="outline"
                     iconLeft={<IoShareOutline />}
-                    onClick={() => setAssignExam(row)}
+                    onClick={() => openAssignModal(row)}
                   >
                     Giao
                   </Button>
@@ -201,15 +223,13 @@ const ExamListPage = () => {
         />
       </Card>
 
-      {assignExam && (
+      {assignExamItem && (
         <AssignExamModal
           open={true}
-          targets={[]}
-          onClose={() => setAssignExam(null)}
-          onSubmit={(_userIds, _groupIds) => {
-            toast.success("Đã phân công đề thi");
-            setAssignExam(null);
-          }}
+          targets={targets}
+          assigning={assigning}
+          onClose={() => setAssignExamItem(null)}
+          onSubmit={(userIds, groupIds) => void handleAssignSubmit(userIds, groupIds)}
         />
       )}
     </div>

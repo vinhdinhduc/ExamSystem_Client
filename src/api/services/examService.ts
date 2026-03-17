@@ -3,29 +3,29 @@ import type { Exam, ExamPayload } from '../../types/exam'
 
 export const examService = {
     getExams: async (): Promise<Exam[]> => {
-        const response = await axiosClient.get<Exam[]>('/api/exams')
+        const response = await axiosClient.get<Exam[]>('/exams')
         return response.data
     },
     getAssignedExams: async (): Promise<Exam[]> => {
-        const response = await axiosClient.get<Exam[]>('/api/exams/assigned')
+        const response = await axiosClient.get<Exam[]>('/exams/assigned')
         return response.data
     },
     getExamById: async (id: string): Promise<Exam> => {
-        const response = await axiosClient.get<Exam>(`/api/exams/${id}`)
+        const response = await axiosClient.get<Exam>(`/exams/${id}`)
         return response.data
     },
     createExam: async (payload: ExamPayload): Promise<Exam> => {
-        const response = await axiosClient.post<Exam>('/api/exams', payload)
+        const response = await axiosClient.post<Exam>('/exams', payload)
         return response.data
     },
     updateExam: async (id: string, payload: ExamPayload): Promise<Exam> => {
-        const response = await axiosClient.put<Exam>(`/api/exams/${id}`, payload)
+        const response = await axiosClient.put<Exam>(`/exams/${id}`, payload)
         return response.data
     },
     deleteExam: async (id: string): Promise<void> => {
-        await axiosClient.delete(`/api/exams/${id}`)
+        await axiosClient.delete(`/exams/${id}`)
     },
     publishExam: async (id: string): Promise<void> => {
-        await axiosClient.patch(`/api/exams/${id}/publish`)
+        await axiosClient.patch(`/exams/${id}/publish`)
     },
 }

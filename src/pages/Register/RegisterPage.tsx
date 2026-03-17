@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Button from "../../components/ui/Button";
 import { useAppDispatch, useAppSelector } from "../../hooks/reduxHooks";
-import { login } from "../../redux/slices/authSlice";
+import { register } from "../../redux/slices/authSlice";
 import type { RootState } from "../../redux/store";
 
 const EyeIcon = ({ open }: { open: boolean }) =>
@@ -20,45 +20,51 @@ const EyeIcon = ({ open }: { open: boolean }) =>
     </svg>
   );
 
-const LoginPage = () => {
+const RegisterPage = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { isAuthenticated, loading } = useAppSelector((state: RootState) => state.auth);
 
-  const [usernameOrEmail, setUsernameOrEmail] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = await dispatch(login({ usernameOrEmail, password }));
-    if (login.fulfilled.match(result)) {
-      toast.success("Đăng nhập thành công");
-      navigate("/dashboard", { replace: true });
+
+    if (password !== confirmPassword) {
+      toast.error("Mật khẩu xác nhận không khớp");
       return;
     }
-    if (result.payload === "Email chưa được xác thực. Vui lòng kiểm tra hộp thư và click vào link xác thực.") {
-      toast.warning(result.payload, { autoClose: 6000 });
-    } else {
-      toast.error(result.payload ?? "Tên đăng nhập hoặc mật khẩu không đúng");
+
+    const result = await dispatch(register({ email, password }));
+    if (register.fulfilled.match(result)) {
+      toast.success("Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.", { autoClose: 7000 });
+      navigate("/login", { replace: true });
+      return;
     }
+
+    toast.error(result.payload ?? "Đăng ký thất bại");
   };
 
   return (
     <div className="login-page">
       <form className="login-card" onSubmit={handleSubmit}>
-        <h2>Đăng nhập</h2>
-        <p>Chào mừng bạn trở lại hệ thống thi trắc nghiệm</p>
+        <h2>Tạo tài khoản</h2>
+        <p>Đăng ký để truy cập hệ thống thi trắc nghiệm</p>
 
-        <label htmlFor="usernameOrEmail">Tên đăng nhập hoặc Email</label>
+        <label htmlFor="email">Email</label>
         <input
-          id="usernameOrEmail"
-          value={usernameOrEmail}
-          onChange={(e) => setUsernameOrEmail(e.target.value)}
-          placeholder="Nhập email"
-          autoComplete="username"
+          id="email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="example@email.com"
+          autoComplete="email"
           required
         />
 
@@ -69,8 +75,8 @@ const LoginPage = () => {
             type={showPassword ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Nhập mật khẩu"
-            autoComplete="current-password"
+            placeholder="Tối thiểu 6 ký tự"
+            autoComplete="new-password"
             required
           />
           <button type="button" className="eye-btn" onClick={() => setShowPassword((v) => !v)} tabIndex={-1}>
@@ -78,18 +84,32 @@ const LoginPage = () => {
           </button>
         </div>
 
-        <Button type="submit" fullWidth disabled={loading}>
-          {loading ? "Đang đăng nhập..." : "Đăng nhập"}
-        </Button>
+        <label htmlFor="confirmPassword">Xác nhận mật khẩu</label>
+        <div className="input-wrapper">
+          <input
+            id="confirmPassword"
+            type={showConfirm ? "text" : "password"}
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Nhập lại mật khẩu"
+            autoComplete="new-password"
+            required
+          />
+          <button type="button" className="eye-btn" onClick={() => setShowConfirm((v) => !v)} tabIndex={-1}>
+            <EyeIcon open={showConfirm} />
+          </button>
+        </div>
 
-        <Link to="/forgot-password" className="muted-link">Quên mật khẩu?</Link>
+        <Button type="submit" fullWidth disabled={loading}>
+          {loading ? "Đang đăng ký..." : "Đăng ký"}
+        </Button>
 
         <div className="auth-divider">hoặc</div>
 
-        <Link to="/register" className="muted-link">Chưa có tài khoản? Đăng ký ngay</Link>
+        <Link to="/login" className="muted-link">Đã có tài khoản? Đăng nhập ngay</Link>
       </form>
     </div>
   );
 };
 
-export default LoginPage;
+export default RegisterPage;
