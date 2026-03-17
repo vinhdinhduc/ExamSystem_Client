@@ -3,11 +3,11 @@ import type { Result, SubmitExamRequest, SubmitExamResponse } from '../../types/
 
 export const resultService = {
     submitExamAttempt: async (payload: SubmitExamRequest): Promise<SubmitExamResponse> => {
-        const response = await axiosClient.post<SubmitExamResponse>('/api/exam-attempts', payload)
+        const response = await axiosClient.post<SubmitExamResponse>('/exam-attempts', payload)
         return response.data
     },
     getResultById: async (id: string): Promise<Result> => {
-        const response = await axiosClient.get<Result>(`/api/results/${id}`)
+        const response = await axiosClient.get<Result>(`/results/${id}`)
         return response.data
     },
 }

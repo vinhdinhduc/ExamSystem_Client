@@ -13,8 +13,10 @@ const LoginPage = () => {
     (state: RootState) => state.auth,
   );
 
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [dataLogin, setDataLogin] = useState({
+    UsernameOrEmail: "",
+    password: "",
+  });
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
@@ -23,7 +25,12 @@ const LoginPage = () => {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const result = await dispatch(login({ username, password }));
+    const result = await dispatch(
+      login({
+        UsernameOrEmail: dataLogin.UsernameOrEmail,
+        password: dataLogin.password,
+      }),
+    );
     if (login.fulfilled.match(result)) {
       toast.success("Login successful");
       navigate("/dashboard", { replace: true });
@@ -42,8 +49,10 @@ const LoginPage = () => {
         <label htmlFor="username">Username</label>
         <input
           id="username"
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
+          value={dataLogin.UsernameOrEmail}
+          onChange={(event) =>
+            setDataLogin({ ...dataLogin, UsernameOrEmail: event.target.value })
+          }
           required
         />
 
@@ -51,8 +60,10 @@ const LoginPage = () => {
         <input
           id="password"
           type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
+          value={dataLogin.password}
+          onChange={(event) =>
+            setDataLogin({ ...dataLogin, password: event.target.value })
+          }
           required
         />
 
