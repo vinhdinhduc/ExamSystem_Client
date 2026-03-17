@@ -1,0 +1,62 @@
+@use "sass:color";
+@use "../variables" as *;
+
+.ui-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+
+    &__label {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: $color-text;
+    }
+
+    &__control {
+        border: 1.5px solid $color-border;
+        border-radius: $radius-md;
+        padding: 0.6rem 0.85rem;
+        font-size: 0.93rem;
+        font-family: inherit;
+        color: $color-text;
+        background: $color-surface;
+        transition:
+            border-color 0.15s,
+            box-shadow 0.15s;
+        width: 100%;
+        box-sizing: border-box;
+
+        &:focus {
+            outline: none;
+            border-color: $color-primary;
+            box-shadow: 0 0 0 3px rgba($color-primary, 0.14);
+        }
+
+        &::placeholder {
+            color: color.adjust($color-muted, $lightness: 20%);
+        }
+    }
+
+    textarea.ui-form-field__control {
+        min-height: 90px;
+        resize: vertical;
+        line-height: 1.5;
+    }
+
+    &__hint {
+        font-size: 0.77rem;
+        color: $color-muted;
+    }
+
+    &__error {
+        font-size: 0.77rem;
+        color: $color-danger;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+
+        &::before {
+            content: "⚠";
+        }
+    }
+}

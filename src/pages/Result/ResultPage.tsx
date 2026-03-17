@@ -1,60 +1,156 @@
 import { useEffect } from "react";
-import { useSelector } from "react-redux";
+import {
+  IoCheckmarkCircle,
+  IoCloseCircle,
+  IoHomeOutline,
+  IoListOutline,
+} from "react-icons/io5";
+import { Link } from "react-router-dom";
 import { useParams } from "react-router-dom";
-import { useAppDispatch } from "../../hooks/reduxHooks";
+import Button from "../../components/ui/Button";
+import Card from "../../components/ui/Card";
+import LoadingSpinner from "../../components/common/LoadingSpinner";
+import { useAppDispatch, useAppSelector } from "../../hooks/reduxHooks";
 import { fetchResultById } from "../../redux/slices/resultSlice";
 import type { RootState } from "../../redux/store";
-import type { ResultState } from "../../types/result";
 
 const ResultPage = () => {
-  const select = useSelector.withTypes<RootState>();
   const { id } = useParams();
   const dispatch = useAppDispatch();
-  const { currentResult, loading, error } = select(
-    (state): ResultState => state.result,
+  const { currentResult, loading, error } = useAppSelector(
+    (state: RootState) => state.result,
   );
 
   useEffect(() => {
-    const resultId = Number(id);
-    if (Number.isNaN(resultId)) {
-      return;
-    }
-
-    void dispatch(fetchResultById(resultId));
+    if (!id) return;
+    void dispatch(fetchResultById(id));
   }, [dispatch, id]);
 
+  if (loading) return <LoadingSpinner />;
+  if (error) return <p className="error-text">{error}</p>;
+
+  if (!currentResult) {
+    return (
+      <div className="result-page">
+        <p>Không tìm thấy kết quả.</p>
+        <Link to="/dashboard">
+          <Button variant="outline" iconLeft={<IoHomeOutline />}>
+            Về Dashboard
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  const isPassed = currentResult.score >= 50;
+
   return (
-    <section className="result-page">
-      <h2>Result</h2>
+    <div className="result-page">
+      {/* Score summary */}
+      <div className="result-score">
+        <div
+          className={`result-score__circle ${isPassed ? "result-score__circle--pass" : "result-score__circle--fail"}`}
+        >
+          {currentResult.score}%
+        </div>
+        <h1 className="result-score__title">
+          {currentResult.examTitle ?? "Kết quả bài thi"}
+        </h1>
+        <p className="result-score__subtitle">
+          {isPassed
+            ? "Chúc mừng! Bạn đã đạt."
+            : "Bạn chưa đạt yêu cầu. Hãy cố gắng hơn!"}
+        </p>
 
-      {loading && <p>Loading result...</p>}
-      {error && <p className="error-text">{error}</p>}
-
-      {currentResult && (
-        <>
-          <article className="card">
-            <h3>Score: {currentResult.score}</h3>
-            <p>
-              Correct Answers: {currentResult.correctAnswers}/
+        <div className="result-score__stats">
+          <div className="result-score__stat-item">
+            <span className="result-score__stat-value result-score__stat-value--correct">
+              {currentResult.correctAnswers}
+            </span>
+            <span className="result-score__stat-label">Câu đúng</span>
+          </div>
+          <div className="result-score__stat-item">
+            <span className="result-score__stat-value result-score__stat-value--wrong">
+              {currentResult.wrongAnswers}
+            </span>
+            <span className="result-score__stat-label">Câu sai</span>
+          </div>
+          <div className="result-score__stat-item">
+            <span className="result-score__stat-value result-score__stat-value--total">
               {currentResult.totalQuestions}
-            </p>
-          </article>
+            </span>
+            <span className="result-score__stat-label">Tổng câu</span>
+          </div>
+        </div>
+      </div>
 
+      {/* Action bar */}
+      <div
+        style={{ display: "flex", gap: "0.75rem", justifyContent: "center" }}
+      >
+        <Link to="/dashboard">
+          <Button variant="outline" iconLeft={<IoHomeOutline />}>
+            Dashboard
+          </Button>
+        </Link>
+        <Link to="/exams">
+          <Button variant="outline" iconLeft={<IoListOutline />}>
+            Danh sách đề
+          </Button>
+        </Link>
+      </div>
+
+      {/* Question review */}
+      {currentResult.showCorrectAnswer && currentResult.reviews.length > 0 && (
+        <Card title="Chi tiết đáp án">
           <div className="review-list">
-            {currentResult.reviews.map((review) => (
-              <article className="card" key={review.questionId}>
-                <h4>{review.questionContent}</h4>
-                <p>Selected: {review.selectedOptionId ?? "No answer"}</p>
-                <p>Correct: {review.correctOptionId}</p>
-                <p className={review.isCorrect ? "ok-text" : "error-text"}>
-                  {review.isCorrect ? "Correct" : "Incorrect"}
+            {currentResult.reviews.map((review, index) => (
+              <div key={review.questionId} className="review-card">
+                <p className="review-card__question">
+                  {index + 1}. {review.questionContent}
                 </p>
-              </article>
+
+                <div className="review-card__answer-row">
+                  <span className="review-card__label">Bạn chọn:</span>
+                  <span className="review-card__value">
+                    {review.selectedOptionIds.length
+                      ? review.selectedOptionIds.join(", ")
+                      : "Chưa trả lời"}
+                  </span>
+                </div>
+
+                <div className="review-card__answer-row">
+                  <span className="review-card__label">Đáp án đúng:</span>
+                  <span className="review-card__value">
+                    {review.correctOptionIds.join(", ")}
+                  </span>
+                </div>
+
+                <div
+                  className={`review-card__verdict ${review.isCorrect ? "review-card__verdict--correct" : "review-card__verdict--wrong"}`}
+                >
+                  {review.isCorrect ? (
+                    <>
+                      <IoCheckmarkCircle /> Đúng
+                    </>
+                  ) : (
+                    <>
+                      <IoCloseCircle /> Sai
+                    </>
+                  )}
+                </div>
+
+                {review.explanation && (
+                  <div className="review-card__explanation">
+                    💡 {review.explanation}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
-        </>
+        </Card>
       )}
-    </section>
+    </div>
   );
 };
 

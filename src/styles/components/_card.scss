@@ -1,9 +1,100 @@
 @use "../variables" as *;
 @use "../mixins" as *;
 
-.card {
+.ui-card {
     @include card;
-    padding: 1rem;
+    padding: 1.25rem 1.5rem;
+
+    &__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+        gap: 1rem;
+    }
+
+    &__headline {
+        flex: 1;
+    }
+
+    &__title {
+        font-family: $font-heading;
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: $color-text;
+        margin: 0 0 0.2rem;
+    }
+
+    &__subtitle {
+        font-size: 0.85rem;
+        color: $color-muted;
+        margin: 0;
+    }
+
+    &__actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-shrink: 0;
+        flex-wrap: wrap;
+    }
+
+    &__body {
+    }
+}
+
+// Stat card (dashboard)
+.stat-card {
+    @include card;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    &__icon {
+        width: 48px;
+        height: 48px;
+        border-radius: $radius-md;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        flex-shrink: 0;
+    }
+
+    &__icon--blue {
+        background: rgba($color-primary, 0.12);
+        color: $color-primary;
+    }
+    &__icon--green {
+        background: rgba($color-secondary, 0.12);
+        color: $color-secondary;
+    }
+    &__icon--orange {
+        background: rgba(#d97706, 0.12);
+        color: #d97706;
+    }
+    &__icon--purple {
+        background: rgba(#7c3aed, 0.12);
+        color: #7c3aed;
+    }
+
+    &__body {
+    }
+    &__label {
+        font-size: 0.78rem;
+        color: $color-muted;
+    }
+    &__value {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: $color-text;
+        line-height: 1.2;
+    }
+
+    // keep legacy names for old code
+    .card-grid {
+        display: grid;
+    }
 }
 
 .card-grid {

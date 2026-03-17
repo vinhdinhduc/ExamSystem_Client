@@ -1,17 +1,29 @@
 export interface QuestionOption {
     id: number
-    text: string
+    content: string
+    imageUrl?: string | null
+    isCorrect?: boolean
+    orderIndex?: number
 }
 
 export interface Question {
-    id: number
+    id: string
+    subjectId: number
     content: string
-    options: QuestionOption[]
+    imageUrl?: string | null
+    explanation?: string | null
+    questionType?: number
+    difficultyLevel?: number
+    tags?: string | string[] | null
+    isActive?: boolean
+    options?: QuestionOption[]
+    answers?: QuestionOption[]
 }
 
 export interface QuestionState {
+    bank: Question[]
     questions: Question[]
-    selectedAnswers: Record<number, number>
+    selectedAnswers: Record<string, number[]>
     loading: boolean
     error: string | null
 }
