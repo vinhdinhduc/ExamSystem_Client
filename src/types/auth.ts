@@ -15,6 +15,7 @@ export interface UserInfo {
     username: string
     fullName: string
     email: string
+    avatar: string | null
     isActive: boolean
     createdAt: string
     roles: string[]

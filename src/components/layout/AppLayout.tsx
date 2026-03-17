@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   IoAlbumsOutline,
   IoBookOutline,
@@ -15,12 +15,23 @@ import Button from "../ui/Button";
 import { useAppDispatch, useAppSelector } from "../../hooks/reduxHooks";
 import { logoutAsync } from "../../redux/slices/authSlice";
 import type { RootState } from "../../redux/store";
+import { getAvatarUrl } from "../../api/services/userService";
 
 const AppLayout = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { user } = useAppSelector((state: RootState) => state.auth);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [avatarPopup, setAvatarPopup] = useState(false);
+  const [lightbox, setLightbox] = useState(false);
+  const avatarBtnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!lightbox) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setLightbox(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightbox]);
 
   const isAdmin = user?.roles?.some((r) => r.toLowerCase() === "admin") ?? false;
 
@@ -32,7 +43,10 @@ const AppLayout = () => {
       { to: "/exams/new", label: "Tạo đề", icon: <IoSchoolOutline /> },
       { to: "/groups", label: "Nhóm / lớp", icon: <IoPeopleOutline /> },
       ...(isAdmin
-        ? [{ to: "/admin/roles", label: "Roles & Permissions", icon: <IoShieldCheckmarkOutline /> }]
+        ? [
+            { to: "/admin/users", label: "Quản lý người dùng", icon: <IoPeopleOutline /> },
+            { to: "/admin/roles", label: "Roles & Permissions", icon: <IoShieldCheckmarkOutline /> },
+          ]
         : []),
     ],
     [isAdmin],
@@ -76,10 +90,24 @@ const AppLayout = () => {
         </nav>
 
         <div className="app-sidebar__footer">
-          <div className="app-sidebar__user">
-            <div className="app-sidebar__avatar">
-              {(user?.fullName ?? user?.username ?? "U").charAt(0)}
-            </div>
+          <div
+            className="app-sidebar__user app-sidebar__user--clickable"
+            onClick={() => { navigate("/profile"); setSidebarOpen(false); }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === "Enter") { navigate("/profile"); setSidebarOpen(false); } }}
+          >
+            {getAvatarUrl(user?.avatar) ? (
+              <img
+                src={getAvatarUrl(user?.avatar)!}
+                alt="avatar"
+                className="app-sidebar__avatar app-sidebar__avatar--img"
+              />
+            ) : (
+              <div className="app-sidebar__avatar">
+                {(user?.fullName ?? user?.username ?? "U").charAt(0)}
+              </div>
+            )}
             <div>
               <strong>{user?.fullName ?? user?.username ?? "User"}</strong>
               <p>{user?.roles?.join(", ") ?? "student"}</p>
@@ -118,6 +146,64 @@ const AppLayout = () => {
               <span className="app-navbar__chip-label">Vai trò</span>
               <strong>{user?.roles?.[0] ?? "student"}</strong>
             </div>
+            <div className="app-navbar__avatar-wrap">
+              <button
+                ref={avatarBtnRef}
+                type="button"
+                className="app-navbar__avatar-btn"
+                onClick={() => setAvatarPopup((v) => !v)}
+                title="Trang cá nhân"
+              >
+                {getAvatarUrl(user?.avatar) ? (
+                  <img
+                    src={getAvatarUrl(user?.avatar)!}
+                    alt="avatar"
+                    className="app-navbar__avatar-img"
+                  />
+                ) : (
+                  <div className="app-navbar__avatar">
+                    {(user?.fullName ?? user?.username ?? "U").charAt(0)}
+                  </div>
+                )}
+              </button>
+
+              {avatarPopup && (
+                <>
+                  <div
+                    className="app-navbar__avatar-overlay"
+                    onClick={() => setAvatarPopup(false)}
+                  />
+                  <div className="app-navbar__avatar-popup">
+                    {getAvatarUrl(user?.avatar) ? (
+                      <img
+                        src={getAvatarUrl(user?.avatar)!}
+                        alt="avatar"
+                        className="app-navbar__avatar-popup-img"
+                        onClick={() => setLightbox(true)}
+                        title="Phóng to"
+                      />
+                    ) : (
+                      <div className="app-navbar__avatar-popup-fallback">
+                        {(user?.fullName ?? user?.username ?? "U").charAt(0)}
+                      </div>
+                    )}
+                    <strong className="app-navbar__avatar-popup-name">
+                      {user?.fullName ?? user?.username ?? "User"}
+                    </strong>
+                    <p className="app-navbar__avatar-popup-role">
+                      {user?.roles?.join(", ") ?? "student"}
+                    </p>
+                    <button
+                      type="button"
+                      className="app-navbar__avatar-popup-btn"
+                      onClick={() => { setAvatarPopup(false); navigate("/profile"); }}
+                    >
+                      Xem hồ sơ
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </header>
 
@@ -125,6 +211,27 @@ const AppLayout = () => {
           <Outlet />
         </main>
       </div>
+
+      {lightbox && getAvatarUrl(user?.avatar) && (
+        <div
+          className="avatar-lightbox"
+          onClick={() => setLightbox(false)}
+        >
+          <img
+            src={getAvatarUrl(user?.avatar)!}
+            alt="avatar"
+            className="avatar-lightbox__img"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            type="button"
+            className="avatar-lightbox__close"
+            onClick={() => setLightbox(false)}
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   );
 };

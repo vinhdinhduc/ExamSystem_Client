@@ -25,6 +25,8 @@ import ExamBuilderPage from "../pages/ExamBuilder/ExamBuilderPage";
 import ExamPreviewPage from "../pages/ExamBuilder/ExamPreviewPage";
 import GroupManagementPage from "../pages/GroupManagement/GroupManagementPage";
 import RolesPermissionsPage from "../pages/Admin/RolesPermissionsPage";
+import UserManagementPage from "../pages/UserManagement/UserManagementPage";
+import ProfilePage from "../pages/Profile/ProfilePage";
 import ProtectedRoute from "../components/common/ProtectedRoute";
 
 const DoExamRouteElement = () => {
@@ -68,6 +70,7 @@ const AppRoutes = () => {
           <Route path="/exams/:id/edit" element={<ExamBuilderPage />} />
           <Route path="/exams/:id/preview" element={<ExamPreviewPage />} />
           <Route path="/groups" element={<GroupManagementPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
         </Route>
       </Route>
 
@@ -75,6 +78,7 @@ const AppRoutes = () => {
       <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
         <Route element={<AppLayout />}>
           <Route path="/admin/roles" element={<RolesPermissionsPage />} />
+          <Route path="/admin/users" element={<UserManagementPage />} />
         </Route>
       </Route>
 

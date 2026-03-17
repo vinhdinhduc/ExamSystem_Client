@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import {
+  IoArrowForwardOutline,
+  IoPeopleOutline,
+} from "react-icons/io5";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import ConfirmModal from "../../components/ui/ConfirmModal";
@@ -10,27 +15,23 @@ import roleService, {
   type RoleDto,
   type RoleWithPermissionsDto,
 } from "../../api/services/roleService";
-import userService, { type UserListDto } from "../../api/services/userService";
 
-type Tab = "roles" | "permissions" | "users";
+type Tab = "roles" | "permissions";
 
 // ─── Roles Tab ────────────────────────────────────────────────────────────────
 const RolesTab = () => {
   const [roles, setRoles] = useState<RoleDto[]>([]);
   const [allPermissions, setAllPermissions] = useState<PermissionDto[]>([]);
 
-  // Create/edit role modal
   const [roleModalOpen, setRoleModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<RoleDto | null>(null);
   const [roleName, setRoleName] = useState("");
   const [roleDesc, setRoleDesc] = useState("");
 
-  // Assign permissions modal
   const [permModalOpen, setPermModalOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<RoleWithPermissionsDto | null>(null);
   const [checkedPermIds, setCheckedPermIds] = useState<Set<string>>(new Set());
 
-  // Delete confirm
   const [deleteTarget, setDeleteTarget] = useState<RoleDto | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -47,9 +48,7 @@ const RolesTab = () => {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   const openCreate = () => {
     setEditingRole(null);
@@ -65,7 +64,7 @@ const RolesTab = () => {
     setRoleModalOpen(true);
   };
 
-  const handleSaveRole = async (e: React.FormEvent) => {
+  const handleSaveRole = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!roleName.trim()) return;
     try {
@@ -123,8 +122,7 @@ const RolesTab = () => {
   const togglePerm = (id: string) => {
     setCheckedPermIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
   };
@@ -153,12 +151,8 @@ const RolesTab = () => {
                 <Button variant="outline" onClick={() => void openAssignPerms(r)}>
                   Permissions
                 </Button>
-                <Button variant="outline" onClick={() => openEdit(r)}>
-                  Sửa
-                </Button>
-                <Button variant="danger" onClick={() => setDeleteTarget(r)}>
-                  Xóa
-                </Button>
+                <Button variant="outline" onClick={() => openEdit(r)}>Sửa</Button>
+                <Button variant="danger" onClick={() => setDeleteTarget(r)}>Xóa</Button>
               </div>
             ),
           },
@@ -174,7 +168,9 @@ const RolesTab = () => {
         onClose={() => setRoleModalOpen(false)}
       >
         <form className="admin-page__form" onSubmit={(e) => void handleSaveRole(e)}>
-          <label className="admin-page__label">Tên Role <span className="admin-page__required">*</span></label>
+          <label className="admin-page__label">
+            Tên Role <span className="admin-page__required">*</span>
+          </label>
           <input
             className="admin-page__input"
             value={roleName}
@@ -190,9 +186,7 @@ const RolesTab = () => {
             placeholder="Mô tả vai trò (tuỳ chọn)"
           />
           <div className="admin-page__form-actions">
-            <Button type="button" variant="ghost" onClick={() => setRoleModalOpen(false)}>
-              Hủy
-            </Button>
+            <Button type="button" variant="ghost" onClick={() => setRoleModalOpen(false)}>Hủy</Button>
             <Button type="submit">{editingRole ? "Lưu thay đổi" : "Tạo mới"}</Button>
           </div>
         </form>
@@ -250,7 +244,6 @@ const PermissionsTab = () => {
   const [code, setCode] = useState("");
   const [desc, setDesc] = useState("");
 
-  // Delete confirm
   const [deleteTarget, setDeleteTarget] = useState<PermissionDto | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -263,9 +256,7 @@ const PermissionsTab = () => {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   const openCreate = () => {
     setEditing(null);
@@ -281,7 +272,7 @@ const PermissionsTab = () => {
     setModalOpen(true);
   };
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!code.trim()) return;
     try {
@@ -346,12 +337,14 @@ const PermissionsTab = () => {
         onClose={() => setModalOpen(false)}
       >
         <form className="admin-page__form" onSubmit={(e) => void handleSave(e)}>
-          <label className="admin-page__label">Mã Permission <span className="admin-page__required">*</span></label>
+          <label className="admin-page__label">
+            Mã Permission <span className="admin-page__required">*</span>
+          </label>
           <input
             className="admin-page__input"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            placeholder="Ví dụ: exam:create, user:manage"
+            placeholder="Ví dụ: EXAM_CREATE, USER_MANAGE"
             required
           />
           <label className="admin-page__label">Mô tả</label>
@@ -368,7 +361,6 @@ const PermissionsTab = () => {
         </form>
       </Modal>
 
-      {/* Delete Permission Confirm */}
       <ConfirmModal
         open={deleteTarget !== null}
         title="Xóa Permission"
@@ -382,198 +374,27 @@ const PermissionsTab = () => {
   );
 };
 
-// ─── Users Tab ────────────────────────────────────────────────────────────────
-const UsersTab = () => {
-  const [users, setUsers] = useState<UserListDto[]>([]);
-  const [allRoles, setAllRoles] = useState<RoleDto[]>([]);
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const pageSize = 20;
-
-  // Assign roles modal
-  const [assignModalOpen, setAssignModalOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<UserListDto | null>(null);
-  const [userRoleNames, setUserRoleNames] = useState<string[]>([]);
-  const [checkedRoleIds, setCheckedRoleIds] = useState<Set<string>>(new Set());
-
-  // Toggle lock confirm
-  const [lockTarget, setLockTarget] = useState<UserListDto | null>(null);
-  const [toggling, setToggling] = useState(false);
-
-  const load = useCallback(async () => {
-    try {
-      const [usersData, rolesData] = await Promise.all([
-        userService.getUsers(page, pageSize),
-        roleService.getRoles(),
-      ]);
-      setUsers(usersData.result);
-      setTotal(usersData.meta.total);
-      setAllRoles(rolesData.result);
-    } catch {
-      toast.error("Không thể tải danh sách users");
-    }
-  }, [page]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const openAssignRoles = async (user: UserListDto) => {
-    try {
-      const data = await userService.getUserWithRoles(user.id);
-      setSelectedUser(user);
-      setUserRoleNames(data.roles.map((r) => r.name));
-      setCheckedRoleIds(new Set(data.roles.map((r) => r.id)));
-      setAssignModalOpen(true);
-    } catch {
-      toast.error("Không thể tải roles của user");
-    }
-  };
-
-  const handleSaveRoles = async () => {
-    if (!selectedUser) return;
-    try {
-      await userService.assignRoles(selectedUser.id, Array.from(checkedRoleIds));
-      toast.success("Cập nhật roles thành công");
-      setAssignModalOpen(false);
-      void load();
-    } catch {
-      toast.error("Cập nhật thất bại");
-    }
-  };
-
-  const handleToggleLockConfirm = async () => {
-    if (!lockTarget) return;
-    setToggling(true);
-    try {
-      const updated = await userService.toggleLock(lockTarget.id);
-      setUsers((prev) => prev.map((x) => (x.id === updated.id ? { ...x, isActive: updated.isActive } : x)));
-      toast.success(`Đã ${updated.isActive ? "mở khóa" : "khóa"} tài khoản "${updated.username}"`);
-      setLockTarget(null);
-    } catch {
-      toast.error("Thao tác thất bại");
-    } finally {
-      setToggling(false);
-    }
-  };
-
-  const toggleRole = (id: string) => {
-    setCheckedRoleIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const totalPages = Math.ceil(total / pageSize) || 1;
-
+// ─── Users shortcut (không lặp code — chuyển sang trang riêng) ───────────────
+const UsersShortcut = () => {
+  const navigate = useNavigate();
   return (
-    <>
-      <div className="admin-page__toolbar">
-        <h3 className="admin-page__section-title">Danh sách Users ({total})</h3>
+    <div className="admin-page__users-shortcut">
+      <div className="admin-page__users-shortcut-icon">
+        <IoPeopleOutline />
       </div>
-
-      <Table
-        columns={[
-          { key: "username", title: "Username" },
-          { key: "fullName", title: "Họ tên" },
-          { key: "email", title: "Email" },
-          {
-            key: "roles",
-            title: "Roles",
-            render: (u) => (u.roles?.length ? u.roles.join(", ") : "—"),
-          },
-          {
-            key: "isActive",
-            title: "Trạng thái",
-            render: (u) => (
-              <span className={`admin-page__status ${u.isActive ? "admin-page__status--active" : "admin-page__status--inactive"}`}>
-                {u.isActive ? "Hoạt động" : "Bị khóa"}
-              </span>
-            ),
-          },
-          {
-            key: "actions",
-            title: "Thao tác",
-            render: (u) => (
-              <div className="admin-page__row-actions">
-                <Button variant="outline" onClick={() => void openAssignRoles(u)}>
-                  Gán Role
-                </Button>
-                <Button
-                  variant={u.isActive ? "danger" : "outline"}
-                  onClick={() => setLockTarget(u)}
-                >
-                  {u.isActive ? "Khóa" : "Mở khóa"}
-                </Button>
-              </div>
-            ),
-          },
-        ]}
-        data={users}
-        rowKey={(u) => u.id}
-      />
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="admin-page__pagination">
-          <Button variant="ghost" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-            ← Trước
-          </Button>
-          <span className="admin-page__page-info">Trang {page} / {totalPages}</span>
-          <Button variant="ghost" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-            Tiếp →
-          </Button>
+      <div>
+        <div className="admin-page__users-shortcut-title">Quản lý người dùng</div>
+        <div className="admin-page__users-shortcut-desc">
+          Tạo, sửa, xóa, khóa tài khoản và gán roles cho người dùng tại trang quản lý riêng.
         </div>
-      )}
-
-      {/* Assign Roles Modal */}
-      <Modal
-        open={assignModalOpen}
-        title={`Gán Role cho: ${selectedUser?.fullName ?? selectedUser?.username ?? ""}`}
-        onClose={() => setAssignModalOpen(false)}
+      </div>
+      <Button
+        iconRight={<IoArrowForwardOutline />}
+        onClick={() => navigate("/admin/users")}
       >
-        <p className="admin-page__modal-hint">
-          Roles hiện tại: <strong>{userRoleNames.join(", ") || "Chưa có"}</strong>
-        </p>
-        <div className="admin-page__perm-list">
-          {allRoles.map((r) => (
-            <label key={r.id} className="admin-page__perm-item">
-              <input
-                type="checkbox"
-                checked={checkedRoleIds.has(r.id)}
-                onChange={() => toggleRole(r.id)}
-              />
-              <span className="admin-page__perm-code">{r.name}</span>
-              {r.description && (
-                <span className="admin-page__perm-desc">{r.description}</span>
-              )}
-            </label>
-          ))}
-        </div>
-        <div className="admin-page__form-actions">
-          <Button variant="ghost" onClick={() => setAssignModalOpen(false)}>Hủy</Button>
-          <Button onClick={() => void handleSaveRoles()}>Lưu</Button>
-        </div>
-      </Modal>
-
-      {/* Toggle Lock Confirm */}
-      <ConfirmModal
-        open={lockTarget !== null}
-        title={lockTarget?.isActive ? "Khóa tài khoản" : "Mở khóa tài khoản"}
-        message={
-          lockTarget?.isActive
-            ? `Bạn có chắc muốn khóa tài khoản "${lockTarget?.username}"? Người dùng sẽ không thể đăng nhập.`
-            : `Bạn có chắc muốn mở khóa tài khoản "${lockTarget?.username}"?`
-        }
-        confirmLabel={lockTarget?.isActive ? "Khóa" : "Mở khóa"}
-        variant={lockTarget?.isActive ? "danger" : "primary"}
-        loading={toggling}
-        onConfirm={() => void handleToggleLockConfirm()}
-        onCancel={() => setLockTarget(null)}
-      />
-    </>
+        Đến trang quản lý
+      </Button>
+    </div>
   );
 };
 
@@ -581,18 +402,23 @@ const UsersTab = () => {
 const RolesPermissionsPage = () => {
   const [activeTab, setActiveTab] = useState<Tab>("roles");
 
+  const tabLabels: Record<Tab, string> = {
+    roles: "Roles",
+    permissions: "Permissions",
+  };
+
   return (
     <section className="admin-page">
       <Card title="Quản lý Roles & Permissions">
         <div className="admin-page__tabs">
-          {(["roles", "permissions", "users"] as Tab[]).map((tab) => (
+          {(["roles", "permissions"] as Tab[]).map((tab) => (
             <button
               key={tab}
               type="button"
               className={`admin-page__tab ${activeTab === tab ? "admin-page__tab--active" : ""}`}
               onClick={() => setActiveTab(tab)}
             >
-              {tab === "roles" ? "Roles" : tab === "permissions" ? "Permissions" : "Users"}
+              {tabLabels[tab]}
             </button>
           ))}
         </div>
@@ -600,9 +426,11 @@ const RolesPermissionsPage = () => {
         <div className="admin-page__tab-content">
           {activeTab === "roles" && <RolesTab />}
           {activeTab === "permissions" && <PermissionsTab />}
-          {activeTab === "users" && <UsersTab />}
         </div>
       </Card>
+
+      {/* Shortcut sang trang quản lý người dùng — không lặp code */}
+      <UsersShortcut />
     </section>
   );
 };
