@@ -1,0 +1,369 @@
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.profile-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  // ── Roles header ──────────────────────────────────
+  &__roles-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.9rem;
+    background: rgba($color-primary, 0.05);
+    border-radius: $radius-md;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    color: $color-muted;
+
+    svg {
+      color: $color-primary;
+      font-size: 1.1rem;
+    }
+  }
+
+  &__role-badge {
+    background: rgba($color-primary, 0.12);
+    color: $color-primary;
+    padding: 0.15rem 0.6rem;
+    border-radius: 99px;
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+
+  // ── Tabs ──────────────────────────────────────────
+  &__tabs {
+    display: flex;
+    gap: 0.25rem;
+    border-bottom: 2px solid $color-border;
+    margin-bottom: 1.5rem;
+  }
+
+  &__tab {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.6rem 1.2rem;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: $color-muted;
+    cursor: pointer;
+    transition:
+      color 0.15s,
+      border-color 0.15s;
+    border-radius: $radius-md $radius-md 0 0;
+
+    &:hover {
+      color: $color-text;
+    }
+
+    &--active {
+      color: $color-primary;
+      border-bottom-color: $color-primary;
+    }
+  }
+
+  &__tab-icon {
+    font-size: 1.05rem;
+    display: flex;
+    align-items: center;
+  }
+
+  &__tab-content {
+    display: flex;
+    flex-direction: column;
+  }
+
+  // ── Form ──────────────────────────────────────────
+  &__form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  &__avatar-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: rgba($color-primary, 0.04);
+    border-radius: $radius-lg;
+    margin-bottom: 0.5rem;
+  }
+
+  // Wrapper cho avatar + nút camera
+  &__avatar-wrap {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+  }
+
+  &__avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, $color-primary, $color-primary-dark);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+
+  &__avatar-img {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+  }
+
+  // Nút camera hiện khi hover
+  &__avatar-edit {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.45);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    opacity: 0;
+    transition: opacity 0.15s;
+
+    &:disabled {
+      cursor: not-allowed;
+    }
+  }
+
+  &__avatar-wrap:hover &__avatar-edit {
+    opacity: 1;
+  }
+
+  &__avatar-input {
+    display: none;
+  }
+
+  &__avatar-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: $color-text;
+  }
+
+  &__avatar-roles {
+    font-size: 0.82rem;
+    color: $color-muted;
+    margin-top: 0.2rem;
+  }
+
+  &__form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+
+    @media (max-width: 560px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+
+    &--full {
+      grid-column: 1 / -1;
+    }
+
+    &--spaced {
+      margin-bottom: 0.75rem;
+    }
+  }
+
+  &__label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: $color-text;
+  }
+
+  &__required {
+    color: $color-danger;
+    margin-left: 2px;
+  }
+
+  &__hint {
+    font-size: 0.75rem;
+    color: $color-muted;
+  }
+
+  &__input {
+    width: 100%;
+    padding: 0.65rem 0.9rem;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    font-size: 0.9rem;
+    color: $color-text;
+    background: $color-surface;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.2s;
+
+    &:focus {
+      border-color: $color-primary;
+      box-shadow: 0 0 0 3px rgba($color-primary, 0.1);
+    }
+
+    &::placeholder {
+      color: $color-muted;
+    }
+
+    &--readonly {
+      background: rgba($color-border, 0.4);
+      cursor: not-allowed;
+      color: $color-muted;
+    }
+
+    &--error {
+      border-color: $color-danger;
+      box-shadow: 0 0 0 3px rgba($color-danger, 0.1);
+    }
+  }
+
+  &__error-msg {
+    font-size: 0.78rem;
+    color: $color-danger;
+  }
+
+  &__form-actions {
+    display: flex;
+    justify-content: flex-start;
+    gap: 0.5rem;
+    padding-top: 0.5rem;
+  }
+
+  // ── Change password info box ──────────────────────
+  &__pwd-info {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.9rem 1rem;
+    background: rgba($color-primary, 0.05);
+    border-left: 4px solid $color-primary;
+    border-radius: 0 $radius-md $radius-md 0;
+    margin-bottom: 0.5rem;
+
+    p {
+      font-size: 0.85rem;
+      color: $color-muted;
+      line-height: 1.5;
+      margin: 0;
+    }
+  }
+
+  &__pwd-icon {
+    font-size: 1.3rem;
+    color: $color-primary;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  // ── Mode switcher (mật khẩu hiện tại / OTP) ──────
+  &__pwd-modes {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+  }
+
+  &__mode-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1rem;
+    border-radius: $radius-md;
+    border: 1.5px solid $color-border;
+    background: $color-surface;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: $color-muted;
+    cursor: pointer;
+    transition: all 0.15s;
+
+    svg {
+      font-size: 1rem;
+    }
+
+    &:hover {
+      border-color: $color-primary;
+      color: $color-primary;
+    }
+
+    &--active {
+      border-color: $color-primary;
+      background: rgba($color-primary, 0.07);
+      color: $color-primary;
+      font-weight: 600;
+    }
+  }
+
+  // ── OTP row (input + resend) ──────────────────────
+  &__otp-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  &__input--otp {
+    letter-spacing: 0.25em;
+    font-size: 1.1rem;
+    font-weight: 700;
+    max-width: 160px;
+  }
+
+  &__resend-btn {
+    padding: 0.6rem 1rem;
+    border-radius: $radius-md;
+    border: 1px solid $color-border;
+    background: $color-surface;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: $color-primary;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+
+    &:hover:not(:disabled) {
+      background: rgba($color-primary, 0.07);
+      border-color: $color-primary;
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  &__otp-send {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  &__otp-hint {
+    font-size: 0.85rem;
+    color: $color-muted;
+    margin: 0;
+  }
+}

@@ -1,5 +1,5 @@
 export interface AssignmentTarget {
-    id: string
+    id: string | number
     fullName: string
     email?: string | null
     avatar?: string | null
@@ -9,8 +9,8 @@ export interface AssignmentTarget {
 
 export interface AssignmentRequest {
     examId: string
-    userIds: string[]
-    groupIds: number[]
+    userId?: string | null
+    groupId?: number | null
 }
 
 export interface AssignmentState {

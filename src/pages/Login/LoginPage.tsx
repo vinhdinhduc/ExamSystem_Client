@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Button from "../../components/ui/Button";
@@ -13,46 +13,41 @@ const LoginPage = () => {
     (state: RootState) => state.auth,
   );
 
-  const [dataLogin, setDataLogin] = useState({
-    UsernameOrEmail: "",
-    password: "",
-  });
+  const [usernameOrEmail, setUsernameOrEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
-  }
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const result = await dispatch(
-      login({
-        UsernameOrEmail: dataLogin.UsernameOrEmail,
-        password: dataLogin.password,
-      }),
-    );
+    const result = await dispatch(login({ usernameOrEmail, password }));
     if (login.fulfilled.match(result)) {
-      toast.success("Login successful");
+      toast.success("Đăng nhập thành công");
       navigate("/dashboard", { replace: true });
       return;
     }
-
-    toast.error(result.payload ?? "Invalid username or password");
+    if (
+      result.payload ===
+      "Email chưa được xác thực. Vui lòng kiểm tra hộp thư và click vào link xác thực."
+    ) {
+      toast.warning(result.payload, { autoClose: 6000 });
+    } else {
+      toast.error(result.payload ?? "Tên đăng nhập hoặc mật khẩu không đúng");
+    }
   };
 
   return (
     <div className="login-page">
       <form className="login-card" onSubmit={handleSubmit}>
-        <h2>Sign In</h2>
-        <p>Access your online exam portal</p>
+        <h2>Đăng nhập</h2>
+        <p>Chào mừng bạn trở lại hệ thống thi trắc nghiệm</p>
 
-        <label htmlFor="username">Username</label>
+        <label htmlFor="usernameOrEmail">Tên đăng nhập hoặc Email</label>
         <input
-          id="username"
-          value={dataLogin.UsernameOrEmail}
-          onChange={(event) =>
-            setDataLogin({ ...dataLogin, UsernameOrEmail: event.target.value })
-          }
+          id="usernameOrEmail"
+          value={usernameOrEmail}
+          onChange={(event) => setUsernameOrEmail(event.target.value)}
           required
         />
 
@@ -60,19 +55,23 @@ const LoginPage = () => {
         <input
           id="password"
           type="password"
-          value={dataLogin.password}
-          onChange={(event) =>
-            setDataLogin({ ...dataLogin, password: event.target.value })
-          }
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
           required
         />
 
         <Button type="submit" fullWidth disabled={loading}>
-          {loading ? "Signing in..." : "Login"}
+          {loading ? "Đang đăng nhập..." : "Đăng nhập"}
         </Button>
 
-        <Link to="/" className="muted-link">
-          Return to home
+        <Link to="/forgot-password" className="muted-link">
+          Quên mật khẩu?
+        </Link>
+
+        <div className="auth-divider">hoặc</div>
+
+        <Link to="/register" className="muted-link">
+          Chưa có tài khoản? Đăng ký ngay
         </Link>
       </form>
     </div>

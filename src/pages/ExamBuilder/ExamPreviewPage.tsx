@@ -12,6 +12,7 @@ import { fetchQuestionsByExamId } from "../../redux/slices/questionSlice";
 import type { RootState } from "../../redux/store";
 import {
   formatDuration,
+  getExamStatusLabel,
   getExamStatusVariant,
   normalizeExamStatus,
 } from "../../utils/examUi";
@@ -23,6 +24,7 @@ const ExamPreviewPage = () => {
   const { examDetail, loading } = useAppSelector(
     (state: RootState) => state.exam,
   );
+  const { user } = useAppSelector((state: RootState) => state.auth);
   const { questions } = useAppSelector((state: RootState) => state.question);
 
   useEffect(() => {
@@ -32,8 +34,10 @@ const ExamPreviewPage = () => {
   }, [dispatch, id]);
 
   const handlePublish = async () => {
-    if (!id) return;
-    const result = await dispatch(publishExam(id));
+    if (!id || !user?.id) return;
+    const result = await dispatch(
+      publishExam({ id, publishedByUserId: user.id }),
+    );
     if (publishExam.fulfilled.match(result)) {
       toast.success("Đề thi đã được xuất bản");
       navigate("/exams");
@@ -50,7 +54,7 @@ const ExamPreviewPage = () => {
     <div className="exam-preview">
       <div className="page-header">
         <div className="page-header__text">
-          <h1 className="page-header__title">Preview đề thi</h1>
+          <h1 className="page-header__title">Xem trước đề thi</h1>
           <p className="page-header__subtitle">
             Kiểm tra lại cấu trúc đề trước khi xuất bản.
           </p>
@@ -58,10 +62,10 @@ const ExamPreviewPage = () => {
       </div>
 
       <Card>
-        <h2 style={{ margin: "0 0 0.6rem" }}>{examDetail.title}</h2>
+        <h2 className="exam-preview__title">{examDetail.title}</h2>
         <div className="exam-preview__meta">
           <Badge
-            label={normalizeExamStatus(examDetail.status)}
+            label={getExamStatusLabel(examDetail.status)}
             variant={getExamStatusVariant(examDetail.status)}
           />
           <span className="exam-preview__stat">
@@ -69,7 +73,7 @@ const ExamPreviewPage = () => {
           </span>
           <span className="exam-preview__stat">{questions.length} câu hỏi</span>
           <span className="exam-preview__stat">
-            Điểm đạt: {examDetail.passingScore}%
+            Điểm đạt: {examDetail.passScore}%
           </span>
         </div>
         {examDetail.description ? <p>{examDetail.description}</p> : null}
@@ -98,7 +102,7 @@ const ExamPreviewPage = () => {
             loading || normalizeExamStatus(examDetail.status) === "Published"
           }
         >
-          Publish Exam
+          Xuất bản đề thi
         </Button>
       </div>
     </div>

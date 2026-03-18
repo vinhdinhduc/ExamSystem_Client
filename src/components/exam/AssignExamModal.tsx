@@ -8,6 +8,7 @@ import type { AssignmentTarget } from "../../types/assignment";
 interface AssignExamModalProps {
   open: boolean;
   targets: AssignmentTarget[];
+  assigning?: boolean;
   onClose: () => void;
   onSubmit: (userIds: string[], groupIds: number[]) => void;
 }
@@ -15,6 +16,7 @@ interface AssignExamModalProps {
 const AssignExamModal = ({
   open,
   targets,
+  assigning = false,
   onClose,
   onSubmit,
 }: AssignExamModalProps) => {
@@ -81,8 +83,11 @@ const AssignExamModal = ({
           <Button variant="outline" onClick={onClose}>
             Hủy
           </Button>
-          <Button onClick={() => onSubmit(selectedUsers, selectedGroups)}>
-            Assign Exam
+          <Button
+            onClick={() => onSubmit(selectedUsers, selectedGroups)}
+            disabled={assigning}
+          >
+            {assigning ? "Đang phân công..." : "Phân công"}
           </Button>
         </div>
       </div>

@@ -18,7 +18,7 @@ export const fetchAssignmentTargets = createAsyncThunk<
         try {
             return await assignmentService.getTargets(keyword ?? '')
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Unable to fetch targets'
+            const message = error instanceof Error ? error.message : 'Không thể tải danh sách đối tượng được giao'
             return thunkApi.rejectWithValue(message)
         }
     },
@@ -30,7 +30,7 @@ export const assignExam = createAsyncThunk<void, AssignmentRequest, { rejectValu
         try {
             await assignmentService.assignExam(payload)
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Unable to assign exam'
+            const message = error instanceof Error ? error.message : 'Không thể giao đề thi'
             return thunkApi.rejectWithValue(message)
         }
     },
@@ -49,7 +49,7 @@ const assignmentSlice = createSlice({
                 state.targets = action.payload
             })
             .addCase(fetchAssignmentTargets.rejected, (state, action) => {
-                state.error = action.payload ?? 'Unable to fetch targets'
+                state.error = action.payload ?? 'Không thể tải danh sách đối tượng được giao'
             })
             .addCase(assignExam.pending, (state) => {
                 state.assigning = true
@@ -60,7 +60,7 @@ const assignmentSlice = createSlice({
             })
             .addCase(assignExam.rejected, (state, action) => {
                 state.assigning = false
-                state.error = action.payload ?? 'Unable to assign exam'
+                state.error = action.payload ?? 'Không thể giao đề thi'
             })
     },
 })

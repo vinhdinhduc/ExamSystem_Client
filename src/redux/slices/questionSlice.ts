@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import { questionService } from '../../api/services/questionService'
-import type { Question, QuestionState } from '../../types/question'
+import type { Question, QuestionCreatePayload, QuestionState } from '../../types/question'
 
 const initialState: QuestionState = {
     bank: [],
@@ -18,7 +18,7 @@ export const fetchQuestionsByExamId = createAsyncThunk<
     try {
         return await questionService.getQuestionsByExamId(examId)
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unable to fetch questions'
+        const message = error instanceof Error ? error.message : 'Không thể tải danh sách câu hỏi'
         return thunkApi.rejectWithValue(message)
     }
 })
@@ -29,11 +29,24 @@ export const fetchQuestionBank = createAsyncThunk<Question[], number | undefined
         try {
             return await questionService.getQuestionBank(subjectId)
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Unable to fetch question bank'
+            const message = error instanceof Error ? error.message : 'Không thể tải ngân hàng câu hỏi'
             return thunkApi.rejectWithValue(message)
         }
     },
 )
+
+export const createQuestion = createAsyncThunk<
+    Question,
+    QuestionCreatePayload,
+    { rejectValue: string }
+>('question/createQuestion', async (payload, thunkApi) => {
+    try {
+        return await questionService.createQuestion(payload)
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Không thể tạo câu hỏi'
+        return thunkApi.rejectWithValue(message)
+    }
+})
 
 const questionSlice = createSlice({
     name: 'question',
@@ -64,7 +77,7 @@ const questionSlice = createSlice({
             })
             .addCase(fetchQuestionsByExamId.rejected, (state, action) => {
                 state.loading = false
-                state.error = action.payload ?? 'Unable to fetch questions'
+                state.error = action.payload ?? 'Không thể tải danh sách câu hỏi'
             })
             .addCase(fetchQuestionBank.pending, (state) => {
                 state.loading = true
@@ -76,7 +89,19 @@ const questionSlice = createSlice({
             })
             .addCase(fetchQuestionBank.rejected, (state, action) => {
                 state.loading = false
-                state.error = action.payload ?? 'Unable to fetch question bank'
+                state.error = action.payload ?? 'Không thể tải ngân hàng câu hỏi'
+            })
+            .addCase(createQuestion.pending, (state) => {
+                state.loading = true
+                state.error = null
+            })
+            .addCase(createQuestion.fulfilled, (state, action) => {
+                state.loading = false
+                state.bank = [action.payload, ...state.bank]
+            })
+            .addCase(createQuestion.rejected, (state, action) => {
+                state.loading = false
+                state.error = action.payload ?? 'Không thể tạo câu hỏi'
             })
     },
 })

@@ -24,15 +24,17 @@ const SubjectSelect = ({ value, onChange }: SubjectSelectProps) => {
     return () => window.clearTimeout(timerId);
   }, [dispatch, keyword]);
 
-  const selectOptions = useMemo(
-    () =>
-      options.map((subject) => ({
-        value: subject.id,
-        label: `${subject.subjectCode} - ${subject.subjectName}`,
-        meta: subject.description ?? undefined,
-      })),
-    [options],
-  );
+  const selectOptions = useMemo(() => {
+    // Defensive check: ensure options is an array before mapping
+    if (!Array.isArray(options)) {
+      return [];
+    }
+    return options.map((subject) => ({
+      value: subject.id,
+      label: `${subject.code} - ${subject.name}`,
+      meta: subject.description ?? undefined,
+    }));
+  }, [options]);
 
   return (
     <Select

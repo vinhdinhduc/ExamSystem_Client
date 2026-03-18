@@ -1,4 +1,4 @@
-import type { Exam, ExamStatus } from '../types/exam'
+import type { Exam, ExamStatus, StudentAssignedExam } from '../types/exam'
 import type { Question, QuestionOption } from '../types/question'
 
 const EXAM_STATUS_MAP: Record<number, ExamStatus> = {
@@ -8,11 +8,7 @@ const EXAM_STATUS_MAP: Record<number, ExamStatus> = {
 }
 
 export const normalizeExamStatus = (status: Exam['status']): ExamStatus => {
-    if (typeof status === 'number') {
-        return EXAM_STATUS_MAP[status] ?? 'Draft'
-    }
-
-    return status
+    return EXAM_STATUS_MAP[status] ?? 'Draft'
 }
 
 export const getExamStatusVariant = (status: Exam['status']) => {
@@ -23,6 +19,17 @@ export const getExamStatusVariant = (status: Exam['status']) => {
             return 'warning'
         default:
             return 'default'
+    }
+}
+
+export const getExamStatusLabel = (status: Exam['status']) => {
+    switch (normalizeExamStatus(status)) {
+        case 'Published':
+            return 'Đã xuất bản'
+        case 'Archived':
+            return 'Lưu trữ'
+        default:
+            return 'Nháp'
     }
 }
 
@@ -72,7 +79,10 @@ export const getDifficultyLabel = (difficultyLevel?: number) => {
     }
 }
 
-export const getAssignmentBucket = (exam: Exam) => {
+type AssignmentExamLike = Pick<Exam, 'status' | 'startDate' | 'endDate'>
+type StudentAssignedExamLike = Pick<StudentAssignedExam, 'status' | 'startDate' | 'endDate'>
+
+export const getAssignmentBucket = (exam: AssignmentExamLike | StudentAssignedExamLike) => {
     const status = normalizeExamStatus(exam.status)
     const now = Date.now()
     const start = exam.startDate ? new Date(exam.startDate).getTime() : null

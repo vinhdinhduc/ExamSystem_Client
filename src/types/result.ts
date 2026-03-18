@@ -36,3 +36,14 @@ export interface SubmitExamResponse {
     resultId: string
     score: number
 }
+
+export interface ResultSummaryView {
+    sessionId: string
+    score: number
+    isPassed: boolean
+    totalCorrect: number
+    submittedAt: string
+    status: number
+    totalQuestions: number
+    examTitle?: string
+}

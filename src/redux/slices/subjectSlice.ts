@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import { subjectService } from '../../api/services/subjectService'
-import type { Subject, SubjectPayload, SubjectState } from '../../types/subject'
+import type { Subject, SubjectListResult, SubjectPayload, SubjectState } from '../../types/subject'
 
 const initialState: SubjectState = {
     subjects: [],
@@ -11,16 +11,22 @@ const initialState: SubjectState = {
     keyword: '',
     page: 1,
     pageSize: 10,
+    total: 0,
+    totalPages: 1,
 }
 
-export const fetchSubjects = createAsyncThunk<Subject[], void, { state: { subject: SubjectState }; rejectValue: string }>(
+export const fetchSubjects = createAsyncThunk<
+    SubjectListResult,
+    void,
+    { state: { subject: SubjectState }; rejectValue: string }
+>(
     'subject/fetchSubjects',
     async (_, thunkApi) => {
         const { keyword, page, pageSize } = thunkApi.getState().subject
         try {
             return await subjectService.getSubjects(keyword, page, pageSize)
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Unable to fetch subjects'
+            const message = error instanceof Error ? error.message : 'Không thể tải danh sách môn học'
             return thunkApi.rejectWithValue(message)
         }
     },
@@ -33,9 +39,10 @@ export const fetchSubjectOptions = createAsyncThunk<
 >('subject/fetchSubjectOptions', async (keyword, thunkApi) => {
     const { pageSize } = thunkApi.getState().subject
     try {
-        return await subjectService.getSubjects(keyword ?? '', 1, pageSize)
+        const { result } = await subjectService.getSubjects(keyword ?? '', 1, pageSize)
+        return result
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unable to fetch subject options'
+        const message = error instanceof Error ? error.message : 'Không thể tải danh sách môn học để chọn'
         return thunkApi.rejectWithValue(message)
     }
 })
@@ -46,7 +53,7 @@ export const createSubject = createAsyncThunk<Subject, SubjectPayload, { rejectV
         try {
             return await subjectService.createSubject(payload)
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Unable to create subject'
+            const message = error instanceof Error ? error.message : 'Không thể tạo môn học'
             return thunkApi.rejectWithValue(message)
         }
     },
@@ -60,7 +67,7 @@ export const updateSubject = createAsyncThunk<
     try {
         return await subjectService.updateSubject(id, payload)
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unable to update subject'
+        const message = error instanceof Error ? error.message : 'Không thể cập nhật môn học'
         return thunkApi.rejectWithValue(message)
     }
 })
@@ -72,7 +79,7 @@ export const deleteSubject = createAsyncThunk<number, number, { rejectValue: str
             await subjectService.deleteSubject(id)
             return id
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Unable to delete subject'
+            const message = error instanceof Error ? error.message : 'Không thể xóa môn học'
             return thunkApi.rejectWithValue(message)
         }
     },
@@ -87,7 +94,7 @@ export const toggleSubject = createAsyncThunk<
         await subjectService.toggleSubject(id, isActive)
         return { id, isActive }
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unable to toggle subject'
+        const message = error instanceof Error ? error.message : 'Không thể thay đổi trạng thái môn học'
         return thunkApi.rejectWithValue(message)
     }
 })
@@ -115,12 +122,16 @@ const subjectSlice = createSlice({
             })
             .addCase(fetchSubjects.fulfilled, (state, action) => {
                 state.loading = false
-                state.subjects = action.payload
-                state.options = action.payload
+                state.subjects = action.payload.result
+                state.options = action.payload.result
+                state.total = action.payload.meta.total
+                state.totalPages = action.payload.meta.pages
+                state.page = action.payload.meta.page
+                state.pageSize = action.payload.meta.pageSize
             })
             .addCase(fetchSubjects.rejected, (state, action) => {
                 state.loading = false
-                state.error = action.payload ?? 'Unable to fetch subjects'
+                state.error = action.payload ?? 'Không thể tải danh sách môn học'
             })
             .addCase(fetchSubjectOptions.pending, (state) => {
                 state.optionsLoading = true
@@ -131,7 +142,7 @@ const subjectSlice = createSlice({
             })
             .addCase(fetchSubjectOptions.rejected, (state, action) => {
                 state.optionsLoading = false
-                state.error = action.payload ?? 'Unable to fetch subject options'
+                state.error = action.payload ?? 'Không thể tải danh sách môn học để chọn'
             })
             .addCase(createSubject.fulfilled, (state, action) => {
                 state.subjects = [action.payload, ...state.subjects]

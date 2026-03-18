@@ -25,3 +25,18 @@ export function isTokenExpired(token: string): boolean {
         return true
     }
 }
+
+// Token sắp hết hạn trong vòng 60 giây
+export function isTokenExpiringSoon(token: string, thresholdSeconds = 60): boolean {
+    try {
+        const payloadPart = token.split('.')[1]
+        if (!payloadPart) return true
+
+        const payload = JSON.parse(decodeBase64Url(payloadPart)) as JwtPayload
+        if (!payload.exp) return true
+
+        return payload.exp * 1000 - Date.now() <= thresholdSeconds * 1000
+    } catch {
+        return true
+    }
+}

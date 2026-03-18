@@ -6,28 +6,88 @@ import {
   IoListOutline,
 } from "react-icons/io5";
 import { Link } from "react-router-dom";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import { useAppDispatch, useAppSelector } from "../../hooks/reduxHooks";
 import { fetchResultById } from "../../redux/slices/resultSlice";
 import type { RootState } from "../../redux/store";
+import type { ResultSummaryView } from "../../types/result";
 
 const ResultPage = () => {
   const { id } = useParams();
+  const location = useLocation();
   const dispatch = useAppDispatch();
   const { currentResult, loading, error } = useAppSelector(
     (state: RootState) => state.result,
   );
+  const summary = (location.state as { summary?: ResultSummaryView } | null)
+    ?.summary;
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || summary) return;
     void dispatch(fetchResultById(id));
-  }, [dispatch, id]);
+  }, [dispatch, id, summary]);
 
-  if (loading) return <LoadingSpinner />;
-  if (error) return <p className="error-text">{error}</p>;
+  if (!summary && loading) return <LoadingSpinner />;
+  if (!summary && error) return <p className="error-text">{error}</p>;
+
+  if (summary) {
+    return (
+      <div className="result-page">
+        <div className="result-score">
+          <div
+            className={`result-score__circle ${summary.isPassed ? "result-score__circle--pass" : "result-score__circle--fail"}`}
+          >
+            {summary.score}%
+          </div>
+          <h1 className="result-score__title">
+            {summary.examTitle ?? "Kết quả bài thi"}
+          </h1>
+          <p className="result-score__subtitle">
+            {summary.isPassed
+              ? "Chúc mừng! Bạn đã đạt."
+              : "Bạn chưa đạt yêu cầu. Hãy cố gắng hơn!"}
+          </p>
+
+          <div className="result-score__stats">
+            <div className="result-score__stat-item">
+              <span className="result-score__stat-value result-score__stat-value--correct">
+                {summary.totalCorrect}
+              </span>
+              <span className="result-score__stat-label">Câu đúng</span>
+            </div>
+            <div className="result-score__stat-item">
+              <span className="result-score__stat-value result-score__stat-value--wrong">
+                {Math.max(0, summary.totalQuestions - summary.totalCorrect)}
+              </span>
+              <span className="result-score__stat-label">Câu sai</span>
+            </div>
+            <div className="result-score__stat-item">
+              <span className="result-score__stat-value result-score__stat-value--total">
+                {summary.totalQuestions}
+              </span>
+              <span className="result-score__stat-label">Tổng câu</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="result-page__actions">
+          <Link to="/dashboard">
+            <Button variant="outline" iconLeft={<IoHomeOutline />}>
+              Bảng điều khiển
+            </Button>
+          </Link>
+          <Link to="/exams">
+            <Button variant="outline" iconLeft={<IoListOutline />}>
+              Danh sách đề
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (!currentResult) {
     return (
@@ -35,7 +95,7 @@ const ResultPage = () => {
         <p>Không tìm thấy kết quả.</p>
         <Link to="/dashboard">
           <Button variant="outline" iconLeft={<IoHomeOutline />}>
-            Về Dashboard
+            Về bảng điều khiển
           </Button>
         </Link>
       </div>
@@ -85,12 +145,10 @@ const ResultPage = () => {
       </div>
 
       {/* Action bar */}
-      <div
-        style={{ display: "flex", gap: "0.75rem", justifyContent: "center" }}
-      >
+      <div className="result-page__actions">
         <Link to="/dashboard">
           <Button variant="outline" iconLeft={<IoHomeOutline />}>
-            Dashboard
+            Bảng điều khiển
           </Button>
         </Link>
         <Link to="/exams">

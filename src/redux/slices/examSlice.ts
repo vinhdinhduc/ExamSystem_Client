@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import { examService } from '../../api/services/examService'
-import type { Exam, ExamPayload, ExamState } from '../../types/exam'
+import type { Exam, ExamPayload, ExamState, StudentAssignedExam } from '../../types/exam'
 
 const initialState: ExamState = {
     exams: [],
@@ -17,19 +17,19 @@ export const fetchExams = createAsyncThunk<Exam[], void, { rejectValue: string }
         try {
             return await examService.getExams()
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Unable to fetch exams'
+            const message = error instanceof Error ? error.message : 'Không thể tải danh sách đề thi'
             return thunkApi.rejectWithValue(message)
         }
     },
 )
 
-export const fetchAssignedExams = createAsyncThunk<Exam[], void, { rejectValue: string }>(
+export const fetchAssignedExams = createAsyncThunk<StudentAssignedExam[], void, { rejectValue: string }>(
     'exam/fetchAssignedExams',
     async (_, thunkApi) => {
         try {
             return await examService.getAssignedExams()
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Unable to fetch assigned exams'
+            const message = error instanceof Error ? error.message : 'Không thể tải danh sách đề thi được giao'
             return thunkApi.rejectWithValue(message)
         }
     },
@@ -41,7 +41,7 @@ export const fetchExamById = createAsyncThunk<Exam, string, { rejectValue: strin
         try {
             return await examService.getExamById(id)
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Unable to fetch exam details'
+            const message = error instanceof Error ? error.message : 'Không thể tải chi tiết đề thi'
             return thunkApi.rejectWithValue(message)
         }
     },
@@ -53,7 +53,7 @@ export const createExam = createAsyncThunk<Exam, ExamPayload, { rejectValue: str
         try {
             return await examService.createExam(payload)
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Unable to create exam'
+            const message = error instanceof Error ? error.message : 'Không thể tạo đề thi'
             return thunkApi.rejectWithValue(message)
         }
     },
@@ -67,19 +67,23 @@ export const updateExam = createAsyncThunk<
     try {
         return await examService.updateExam(id, payload)
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unable to update exam'
+        const message = error instanceof Error ? error.message : 'Không thể cập nhật đề thi'
         return thunkApi.rejectWithValue(message)
     }
 })
 
-export const publishExam = createAsyncThunk<string, string, { rejectValue: string }>(
+export const publishExam = createAsyncThunk<
+    string,
+    { id: string; publishedByUserId: string },
+    { rejectValue: string }
+>(
     'exam/publishExam',
-    async (id, thunkApi) => {
+    async ({ id, publishedByUserId }, thunkApi) => {
         try {
-            await examService.publishExam(id)
+            await examService.publishExam(id, publishedByUserId)
             return id
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Unable to publish exam'
+            const message = error instanceof Error ? error.message : 'Không thể xuất bản đề thi'
             return thunkApi.rejectWithValue(message)
         }
     },
@@ -92,7 +96,7 @@ export const deleteExam = createAsyncThunk<string, string, { rejectValue: string
             await examService.deleteExam(id)
             return id
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Unable to delete exam'
+            const message = error instanceof Error ? error.message : 'Không thể xóa đề thi'
             return thunkApi.rejectWithValue(message)
         }
     },
@@ -122,10 +126,13 @@ const examSlice = createSlice({
             })
             .addCase(fetchExams.rejected, (state, action) => {
                 state.loading = false
-                state.error = action.payload ?? 'Unable to fetch exams'
+                state.error = action.payload ?? 'Không thể tải danh sách đề thi'
             })
             .addCase(fetchAssignedExams.fulfilled, (state, action) => {
                 state.assignedExams = action.payload
+            })
+            .addCase(fetchAssignedExams.rejected, (state) => {
+                state.assignedExams = []
             })
             .addCase(fetchExamById.pending, (state) => {
                 state.loading = true
@@ -137,7 +144,7 @@ const examSlice = createSlice({
             })
             .addCase(fetchExamById.rejected, (state, action) => {
                 state.loading = false
-                state.error = action.payload ?? 'Unable to fetch exam details'
+                state.error = action.payload ?? 'Không thể tải chi tiết đề thi'
             })
             .addCase(createExam.fulfilled, (state, action) => {
                 state.exams = [action.payload, ...state.exams]
@@ -156,10 +163,10 @@ const examSlice = createSlice({
             })
             .addCase(publishExam.fulfilled, (state, action) => {
                 state.exams = state.exams.map((exam) =>
-                    exam.id === action.payload ? { ...exam, status: 'Published' } : exam,
+                    exam.id === action.payload ? { ...exam, status: 1 } : exam,
                 )
                 if (state.examDetail?.id === action.payload) {
-                    state.examDetail = { ...state.examDetail, status: 'Published' }
+                    state.examDetail = { ...state.examDetail, status: 1 }
                 }
             })
     },

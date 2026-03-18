@@ -27,3 +27,22 @@ export interface QuestionState {
     loading: boolean
     error: string | null
 }
+
+export interface QuestionCreateOptionPayload {
+    content: string
+    isCorrect: boolean
+    orderIndex: number
+}
+
+export interface QuestionCreatePayload {
+    subjectId: number
+    createdByUserId: string
+    content: string
+    imageUrl?: string | null
+    explanation?: string | null
+    questionType: number
+    difficultyLevel: number
+    tags?: string | null
+    isActive?: boolean
+    options: QuestionCreateOptionPayload[]
+}

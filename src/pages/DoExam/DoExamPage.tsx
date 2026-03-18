@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   IoArrowBackOutline,
   IoArrowForwardOutline,
@@ -35,37 +35,103 @@ const DoExamPage = () => {
   const { questions, loading: questionsLoading } = useAppSelector(
     (state: RootState) => state.question,
   );
-  const { sessionId, answers, currentQuestion, remainingTime, submitting } =
-    useAppSelector((state: RootState) => state.examSession);
+  const { user } = useAppSelector((state: RootState) => state.auth);
+  const {
+    sessionId,
+    answers,
+    currentQuestion,
+    remainingTime,
+    submitting,
+    questionOrder,
+    questionAnswerOrder,
+  } = useAppSelector((state: RootState) => state.examSession);
 
   const hasAutoSubmitted = useRef(false);
   const autosaveDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Bootstrap session on mount
   useEffect(() => {
-    if (!id) return;
+    if (!id || !user?.id) return;
+
     hasAutoSubmitted.current = false;
     void dispatch(fetchExamById(id));
     void dispatch(fetchQuestionsByExamId(id));
-    void dispatch(startExamSession(id));
+    void dispatch(
+      startExamSession({ examId: id, userId: user.id, accessCode: null }),
+    );
+
     return () => {
       dispatch(clearSessionState());
     };
-  }, [dispatch, id]);
+  }, [dispatch, id, user?.id]);
+
+  const orderedQuestions = useMemo(() => {
+    if (!questions.length) {
+      return [];
+    }
+
+    const questionMap = new Map(
+      questions.map((question) => [question.id, question]),
+    );
+    const ordered = questionOrder
+      .map((questionId) => questionMap.get(questionId))
+      .filter((question): question is NonNullable<typeof question> =>
+        Boolean(question),
+      );
+
+    const sourceQuestions = ordered.length > 0 ? ordered : questions;
+
+    return sourceQuestions.map((question) => {
+      const answerOrder = questionAnswerOrder[question.id];
+      if (!answerOrder || answerOrder.length === 0) {
+        return question;
+      }
+
+      const options = [...(question.options ?? question.answers ?? [])];
+      options.sort((a, b) => {
+        const aIndex = answerOrder.indexOf(a.id);
+        const bIndex = answerOrder.indexOf(b.id);
+        const resolvedA = aIndex === -1 ? Number.MAX_SAFE_INTEGER : aIndex;
+        const resolvedB = bIndex === -1 ? Number.MAX_SAFE_INTEGER : bIndex;
+        return resolvedA - resolvedB;
+      });
+
+      return { ...question, options };
+    });
+  }, [questionAnswerOrder, questionOrder, questions]);
 
   const handleSubmit = useCallback(async () => {
     if (!sessionId || hasAutoSubmitted.current) return;
+
     hasAutoSubmitted.current = true;
     const result = await dispatch(submitExamSession(sessionId));
     if (submitExamSession.fulfilled.match(result)) {
       toast.success("Nộp bài thành công!");
-      navigate(`/result/${result.payload.id}`, { replace: true });
+      navigate(`/result/${result.payload.sessionId}`, {
+        replace: true,
+        state: {
+          summary: {
+            sessionId: result.payload.sessionId,
+            score: result.payload.score,
+            isPassed: result.payload.isPassed,
+            totalCorrect: result.payload.totalCorrect,
+            submittedAt: result.payload.submittedAt,
+            status: result.payload.status,
+            totalQuestions: orderedQuestions.length,
+            examTitle: examDetail?.title,
+          },
+        },
+      });
     } else {
       toast.error("Không thể nộp bài, vui lòng thử lại.");
     }
-  }, [dispatch, navigate, sessionId]);
+  }, [
+    dispatch,
+    examDetail?.title,
+    navigate,
+    orderedQuestions.length,
+    sessionId,
+  ]);
 
-  // Debounce autosave 500ms
   const handleAnswer = (questionId: string, selectedIds: number[]) => {
     dispatch(setSessionAnswer({ questionId, answerIds: selectedIds }));
     if (autosaveDebounce.current) clearTimeout(autosaveDebounce.current);
@@ -75,15 +141,15 @@ const DoExamPage = () => {
   };
 
   const answeredMap: Record<number, boolean> = {};
-  questions.forEach((q, idx) => {
-    answeredMap[idx] = (answers[q.id]?.length ?? 0) > 0;
+  orderedQuestions.forEach((question, index) => {
+    answeredMap[index] = (answers[question.id]?.length ?? 0) > 0;
   });
   const answeredCount = Object.values(answeredMap).filter(Boolean).length;
-  const progressPct = questions.length
-    ? Math.round((answeredCount / questions.length) * 100)
+  const progressPct = orderedQuestions.length
+    ? Math.round((answeredCount / orderedQuestions.length) * 100)
     : 0;
 
-  const currentQ = questions[currentQuestion] ?? null;
+  const currentQ = orderedQuestions[currentQuestion] ?? null;
 
   if (questionsLoading || !sessionId) return <LoadingSpinner />;
 
@@ -119,12 +185,12 @@ const DoExamPage = () => {
               >
                 Câu trước
               </Button>
-              <span style={{ fontSize: "0.85rem", color: "#61728a" }}>
-                {currentQuestion + 1} / {questions.length}
+              <span className="do-exam__counter">
+                {currentQuestion + 1} / {orderedQuestions.length}
               </span>
               <Button
                 iconRight={<IoArrowForwardOutline />}
-                disabled={currentQuestion === questions.length - 1}
+                disabled={currentQuestion === orderedQuestions.length - 1}
                 onClick={() =>
                   dispatch(setCurrentQuestion(currentQuestion + 1))
                 }
@@ -140,7 +206,7 @@ const DoExamPage = () => {
 
       <div className="do-exam__sidebar">
         <QuestionPalette
-          total={questions.length}
+          total={orderedQuestions.length}
           current={currentQuestion}
           answeredMap={answeredMap}
           onSelect={(idx) => dispatch(setCurrentQuestion(idx))}
@@ -148,7 +214,8 @@ const DoExamPage = () => {
 
         <Card>
           <p className="do-exam__progress">
-            Đã trả lời: <strong>{answeredCount}</strong> / {questions.length}
+            Đã trả lời: <strong>{answeredCount}</strong> /{" "}
+            {orderedQuestions.length}
           </p>
           <div className="do-exam__progress-bar">
             <div
@@ -156,7 +223,7 @@ const DoExamPage = () => {
               style={{ width: `${progressPct}%` }}
             />
           </div>
-          <div style={{ marginTop: "0.75rem" }}>
+          <div className="do-exam__submit-wrap">
             <Button
               fullWidth
               iconLeft={<IoCheckmarkCircleOutline />}

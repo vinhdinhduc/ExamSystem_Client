@@ -1,11 +1,21 @@
 @use "../variables" as *;
 
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap");
+
+:root {
+    --color-muted: #{$color-muted};
+    --color-primary: #{$color-primary};
+    --color-border: #{$color-border};
+}
+
 body {
     font-family: $font-body;
     color: $color-text;
     background:
-        radial-gradient(circle at 10% -10%, #d8ecff 0%, transparent 35%),
-        radial-gradient(circle at 90% 0%, #daf6eb 0%, transparent 30%), $color-bg;
+        radial-gradient(circle at 0% -10%, rgba($color-primary, 0.2) 0%, transparent 38%),
+        radial-gradient(circle at 100% 0%, rgba($color-secondary, 0.16) 0%, transparent 34%),
+        linear-gradient(180deg, $color-bg 0%, $color-bg-soft 70%);
+    line-height: 1.5;
 }
 
 h1,
@@ -21,6 +31,10 @@ p {
     color: $color-muted;
 }
 
+a {
+    transition: color $transition-fast;
+}
+
 .error-text {
     color: $color-danger;
 }
@@ -29,7 +43,121 @@ p {
     color: $color-secondary;
 }
 
+.status-success {
+    color: $color-secondary;
+}
+
+.status-error {
+    color: $color-danger;
+}
+
 .muted-link {
     color: $color-muted;
     font-size: 0.9rem;
+    text-decoration: none;
+
+    &:hover {
+        color: $color-primary;
+        text-decoration: underline;
+    }
+}
+
+.form-input {
+    width: 100%;
+    border: 1.5px solid $color-border;
+    border-radius: 8px;
+    padding: 0.55rem 0.85rem;
+    font-size: 0.9rem;
+    font-family: inherit;
+    color: $color-text;
+    background: $color-surface;
+    box-sizing: border-box;
+    transition:
+        border-color 0.15s,
+        box-shadow 0.15s;
+
+    &:focus {
+        outline: none;
+        border-color: $color-primary;
+        box-shadow: 0 0 0 3px rgba($color-primary, 0.12);
+    }
+
+    &::placeholder {
+        color: $color-muted;
+    }
+}
+
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+
+    input {
+        width: 100%;
+        padding-right: 2.6rem;
+        box-sizing: border-box;
+    }
+
+    .eye-btn {
+        position: absolute;
+        right: 0.65rem;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        color: rgba(195, 226, 255, 0.65);
+        display: flex;
+        align-items: center;
+        transition: color $transition-fast;
+
+        &:hover {
+            color: rgba(220, 238, 255, 1);
+        }
+
+        svg {
+            width: 18px;
+            height: 18px;
+        }
+    }
+}
+
+.auth-link-block {
+    margin-top: 1rem;
+    display: block;
+    text-align: center;
+}
+
+.auth-status-wrap {
+    text-align: center;
+}
+
+.auth-status {
+    text-align: center;
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+
+    &--loading {
+        color: rgba(230, 240, 255, 0.82);
+    }
+
+    &--success {
+        color: #8ff4ca;
+    }
+
+    &--error {
+        color: #ff9b9b;
+    }
+}
+
+.auth-manual-form {
+    margin-top: 1rem;
+    display: grid;
+    gap: 0.6rem;
+}
+
+.auth-manual-hint {
+    font-size: 0.84rem;
+    color: rgba(219, 233, 248, 0.72);
+    margin: 0;
 }
