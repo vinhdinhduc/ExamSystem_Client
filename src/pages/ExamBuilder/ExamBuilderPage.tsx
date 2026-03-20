@@ -4,6 +4,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
   IoAddOutline,
+  IoCloudUploadOutline,
+  IoDownloadOutline,
   IoFilterOutline,
   IoListOutline,
   IoSparklesOutline,
@@ -28,9 +30,15 @@ import {
   fetchQuestionBank,
 } from "../../redux/slices/questionSlice";
 import type { RootState } from "../../redux/store";
-import type { ExamPayload } from "../../types/exam";
+import type {
+  ExamPayload,
+  ExamAuthoringResult,
+  ExamQuestionDraft,
+} from "../../types/exam";
 import type { QuestionCreatePayload } from "../../types/question";
 import { getDifficultyLabel, getQuestionTypeLabel } from "../../utils/examUi";
+import Badge from "../../components/ui/Badge";
+import { BiCheckCircle, BiQuestionMark, BiTargetLock } from "react-icons/bi";
 
 const tabs = ["Thông tin đề", "Câu hỏi", "Cấu hình"] as const;
 type BuilderTab = (typeof tabs)[number];
@@ -71,6 +79,51 @@ const questionDefaultValues: QuestionFormValues = {
 
 const initialOptionDrafts = ["", "", "", ""];
 
+// ── Draft Preview Component ──
+
+const DraftQuestionPreview = ({
+  question,
+  index,
+}: {
+  question: ExamQuestionDraft;
+  index: number;
+}) => (
+  <article className="exam-builder__draft-item">
+    <div className="exam-builder__draft-item-head">
+      <span className="exam-builder__draft-item-index">Câu {index + 1}</span>
+      <div className="exam-builder__draft-item-badges">
+        <Badge
+          label={getQuestionTypeLabel(question.questionType)}
+          variant="info"
+        />
+        <Badge
+          label={getDifficultyLabel(question.difficultyLevel)}
+          variant="warning"
+        />
+        <Badge label={`${question.score} điểm`} variant="default" />
+      </div>
+    </div>
+    <p className="exam-builder__draft-item-content">{question.content}</p>
+    <ul className="exam-builder__draft-item-options">
+      {question.options.map((opt, oi) => (
+        <li
+          key={oi}
+          className={`exam-builder__draft-item-option ${opt.isCorrect ? "exam-builder__draft-item-option--correct" : ""}`}
+        >
+          {opt.isCorrect ? "✓" : "○"} {opt.content}
+        </li>
+      ))}
+    </ul>
+    {question.explanation && (
+      <p className="exam-builder__draft-item-explanation">
+        {question.explanation}
+      </p>
+    )}
+  </article>
+);
+
+// ── Main Component ──
+
 const ExamBuilderPage = () => {
   const { id } = useParams();
   const isEdit = Boolean(id);
@@ -80,6 +133,9 @@ const ExamBuilderPage = () => {
   const { examDetail, selectedQuestionIds, loading } = useAppSelector(
     (state: RootState) => state.exam,
   );
+  console.log("examDetail", examDetail);
+  console.log("selectedQuestionIds", selectedQuestionIds);
+
   const { bank } = useAppSelector((state: RootState) => state.question);
   const { user } = useAppSelector((state: RootState) => state.auth);
 
@@ -96,12 +152,30 @@ const ExamBuilderPage = () => {
     [],
   );
 
+  // ── Import & AI state ──
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importLoading, setImportLoading] = useState(false);
+  const [templateDownloading, setTemplateDownloading] = useState(false);
+
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [aiQuestionCount, setAiQuestionCount] = useState(10);
+  const [aiDifficulty, setAiDifficulty] = useState(1);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const [draftResult, setDraftResult] = useState<ExamAuthoringResult | null>(
+    null,
+  );
+  const [draftModalOpen, setDraftModalOpen] = useState(false);
+
   const {
     register: examRegister,
     handleSubmit: handleExamSubmit,
     setValue: setExamValue,
     reset: resetExam,
     control: examControl,
+    getValues: getExamValues,
     formState: { errors },
   } = useForm<FormValues>({ defaultValues });
 
@@ -241,6 +315,204 @@ const ExamBuilderPage = () => {
     setCorrectOptionIndexes([]);
   };
 
+  // ── Import handler ──
+
+  const handleImportSubmit = async () => {
+    if (!importFile) {
+      toast.error("Vui lòng chọn file để import");
+      return;
+    }
+    if (!subjectId) {
+      toast.error("Vui lòng chọn môn học trước");
+      setImportModalOpen(false);
+      setTab("Thông tin đề");
+      return;
+    }
+    if (!user?.id) {
+      toast.error("Không xác định được người dùng. Vui lòng đăng nhập lại.");
+      return;
+    }
+
+    const formValues = getExamValues();
+    setImportLoading(true);
+    try {
+      const result = await examService.importFromFile({
+        subjectId,
+        createdByUserId: user.id,
+        title: formValues.title || "Đề thi import",
+        description: formValues.description || null,
+        instructions: formValues.instructions || null,
+        duration: formValues.duration,
+        passScore: formValues.passScore,
+        maxAttempts: formValues.maxAttempts ?? 1,
+        shuffleQuestions: formValues.shuffleQuestions,
+        shuffleAnswers: formValues.shuffleAnswers,
+        showResultAfter: formValues.showResultAfter ?? true,
+        showCorrectAnswer: formValues.showCorrectAnswer ?? false,
+        status: formValues.status,
+        startDate: formValues.startDate || null,
+        endDate: formValues.endDate || null,
+        accessCode: formValues.accessCode || null,
+        file: importFile,
+        saveToDatabase: true,
+      });
+      setDraftResult(result);
+      setImportModalOpen(false);
+      setImportFile(null);
+      setDraftModalOpen(true);
+      toast.success(`Import thành công! ${result.totalQuestions} câu hỏi.`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Import đề thi thất bại",
+      );
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleDownloadImportTemplate = async () => {
+    setTemplateDownloading(true);
+    try {
+      const { blob, fileName } = await examService.downloadImportTemplate();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+      toast.success("Đã tải template import");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Không thể tải template import",
+      );
+    } finally {
+      setTemplateDownloading(false);
+    }
+  };
+
+  const handleAiGenerate = async () => {
+    if (!subjectId) {
+      toast.error("Vui lòng chọn môn học trước");
+      setAiModalOpen(false);
+      setTab("Thông tin đề");
+      return;
+    }
+    if (!user?.id) {
+      toast.error("Không xác định được người dùng. Vui lòng đăng nhập lại.");
+      return;
+    }
+
+    const formValues = getExamValues();
+    setAiLoading(true);
+    try {
+      const result = await examService.generateWithGemini({
+        subjectId,
+        createdByUserId: user.id,
+        title: formValues.title || "Đề thi AI",
+        description: formValues.description || null,
+        instructions: formValues.instructions || null,
+        questionCount: aiQuestionCount,
+        difficultyLevel: aiDifficulty,
+        duration: formValues.duration,
+        passScore: formValues.passScore,
+        maxAttempts: formValues.maxAttempts ?? 1,
+        shuffleQuestions: formValues.shuffleQuestions,
+        shuffleAnswers: formValues.shuffleAnswers,
+        showResultAfter: formValues.showResultAfter ?? true,
+        showCorrectAnswer: formValues.showCorrectAnswer ?? false,
+        status: formValues.status,
+        startDate: formValues.startDate || null,
+        endDate: formValues.endDate || null,
+        accessCode: formValues.accessCode || null,
+        additionalPrompt: aiPrompt || null,
+        saveToDatabase: true,
+      });
+
+      console.log("Check result gemini", result);
+
+      setDraftResult(result);
+      setAiModalOpen(false);
+      setAiPrompt("");
+      setDraftModalOpen(true);
+      toast.success(`AI đã tạo ${result.totalQuestions} câu hỏi!`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Sinh đề bằng AI thất bại",
+      );
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const applyDraftToExam = async () => {
+    if (!draftResult) return;
+
+    const draft = draftResult.draft;
+
+    if (draftResult.examId) {
+      toast.success("Đề thi đã được lưu thành công!");
+      setDraftModalOpen(false);
+      setDraftResult(null);
+      navigate(`/exams/${draftResult.examId}/preview`);
+      return;
+    }
+
+    // Otherwise, populate the form with draft data
+    setExamValue("title", draft.title);
+    if (draft.description) setExamValue("description", draft.description);
+    if (draft.instructions) setExamValue("instructions", draft.instructions);
+    setExamValue("duration", draft.duration);
+    setExamValue("passScore", draft.passScore);
+    setExamValue("maxAttempts", draft.maxAttempts);
+    setExamValue("shuffleQuestions", draft.shuffleQuestions);
+    setExamValue("shuffleAnswers", draft.shuffleAnswers);
+    setExamValue("showResultAfter", draft.showResultAfter);
+    setExamValue("showCorrectAnswer", draft.showCorrectAnswer);
+
+    // Create questions from draft and add to bank
+    if (user?.id && subjectId) {
+      const newQuestionIds: string[] = [];
+      for (const draftQ of draft.questions) {
+        const payload: QuestionCreatePayload = {
+          subjectId,
+          createdByUserId: user.id,
+          content: draftQ.content,
+          explanation: draftQ.explanation || null,
+          questionType: draftQ.questionType,
+          difficultyLevel: draftQ.difficultyLevel,
+          tags: null,
+          isActive: true,
+          options: draftQ.options.map((opt) => ({
+            content: opt.content,
+            isCorrect: opt.isCorrect,
+            orderIndex: opt.orderIndex,
+            imageUrl: opt.imageUrl || null,
+          })),
+        };
+        const result = await dispatch(createQuestion(payload));
+        if (createQuestion.fulfilled.match(result)) {
+          newQuestionIds.push(result.payload.id);
+        }
+      }
+
+      if (newQuestionIds.length > 0) {
+        dispatch(
+          setSelectedQuestionIds([...selectedQuestionIds, ...newQuestionIds]),
+        );
+        void dispatch(fetchQuestionBank(subjectId));
+        toast.success(`Đã thêm ${newQuestionIds.length} câu hỏi vào đề!`);
+      }
+    }
+
+    setDraftModalOpen(false);
+    setDraftResult(null);
+    setTab("Câu hỏi");
+  };
+
   const onCreateQuestion = handleQuestionSubmit(async (values) => {
     if (!subjectId) {
       toast.error("Vui lòng chọn môn học trước khi tạo câu hỏi");
@@ -354,7 +626,7 @@ const ExamBuilderPage = () => {
     const examQuestionItems = selectedQuestionIds.map(
       (questionId, orderIndex) => ({
         questionId,
-        orderIndex,
+        orderIndex: orderIndex + 1,
         score: 1,
       }),
     );
@@ -363,7 +635,7 @@ const ExamBuilderPage = () => {
       const result = await dispatch(updateExam({ id, payload }));
       if (updateExam.fulfilled.match(result)) {
         try {
-          await examService.saveExamQuestions(id, examQuestionItems);
+          await examService.syncExamQuestions(id, examQuestionItems);
           toast.success("Cập nhật đề thi thành công");
           navigate(`/exams/${id}/preview`);
         } catch (error) {
@@ -494,21 +766,53 @@ const ExamBuilderPage = () => {
                 title="Ngân hàng câu hỏi"
                 subtitle="Lọc nhanh, thêm câu hỏi mới và kéo-thả vào đề"
                 actions={
-                  <Button
-                    type="button"
-                    variant="outline"
-                    iconLeft={<IoAddOutline />}
-                    onClick={() => {
-                      if (!subjectId) {
-                        toast.info("Vui lòng chọn môn học trước");
-                        setTab("Thông tin đề");
-                        return;
-                      }
-                      setQuestionModalOpen(true);
-                    }}
-                  >
-                    Tạo câu hỏi
-                  </Button>
+                  <div className="exam-builder__import-ai-actions">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      iconLeft={<IoAddOutline />}
+                      onClick={() => {
+                        if (!subjectId) {
+                          toast.info("Vui lòng chọn môn học trước");
+                          setTab("Thông tin đề");
+                          return;
+                        }
+                        setQuestionModalOpen(true);
+                      }}
+                    >
+                      Tạo câu hỏi
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      iconLeft={<IoCloudUploadOutline />}
+                      onClick={() => {
+                        if (!subjectId) {
+                          toast.info("Vui lòng chọn môn học trước");
+                          setTab("Thông tin đề");
+                          return;
+                        }
+                        setImportModalOpen(true);
+                      }}
+                    >
+                      Import file
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      iconLeft={<IoSparklesOutline />}
+                      onClick={() => {
+                        if (!subjectId) {
+                          toast.info("Vui lòng chọn môn học trước");
+                          setTab("Thông tin đề");
+                          return;
+                        }
+                        setAiModalOpen(true);
+                      }}
+                    >
+                      Sinh đề AI
+                    </Button>
+                  </div>
                 }
               >
                 <div className="exam-builder__bank-tools">
@@ -706,6 +1010,7 @@ const ExamBuilderPage = () => {
         </form>
       </Card>
 
+      {/* ── Question Creation Modal ── */}
       <Modal
         open={questionModalOpen}
         title="Tạo câu hỏi trắc nghiệm"
@@ -842,6 +1147,238 @@ const ExamBuilderPage = () => {
             <Button type="submit">Tạo và thêm vào đề</Button>
           </div>
         </form>
+      </Modal>
+
+      {/* ── Import from File Modal ── */}
+      <Modal
+        open={importModalOpen}
+        title="Import đề thi từ file"
+        description="Tải lên file (.docx, .xlsx, .pdf) chứa câu hỏi trắc nghiệm. Hệ thống sẽ tự động phân tích và tạo đề thi."
+        size="lg"
+        onClose={() => {
+          setImportModalOpen(false);
+          setImportFile(null);
+        }}
+      >
+        <div className="exam-builder__import-modal">
+          <div className="exam-builder__footer-actions">
+            <Button
+              type="button"
+              variant="outline"
+              iconLeft={<IoDownloadOutline />}
+              disabled={templateDownloading}
+              onClick={() => void handleDownloadImportTemplate()}
+            >
+              {templateDownloading
+                ? "Đang tải template..."
+                : "Tải template import"}
+            </Button>
+          </div>
+
+          <div
+            className={`exam-builder__file-upload ${importFile ? "exam-builder__file-upload--has-file" : ""}`}
+          >
+            <IoCloudUploadOutline className="exam-builder__file-upload-icon" />
+            <p className="exam-builder__file-upload-text">
+              {importFile
+                ? importFile.name
+                : "Kéo thả file vào đây hoặc click để chọn"}
+            </p>
+            <p className="exam-builder__file-upload-hint">
+              Hỗ trợ: .docx, .xlsx, .pdf (tối đa 10MB)
+            </p>
+            <input
+              type="file"
+              className="exam-builder__file-upload-input"
+              accept=".docx,.xlsx,.pdf"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) setImportFile(file);
+              }}
+            />
+          </div>
+
+          {importFile && (
+            <div className="exam-builder__file-info">
+              <span className="exam-builder__file-info-name">
+                📄 {importFile.name}
+              </span>
+              <span className="exam-builder__file-info-size">
+                {(importFile.size / 1024).toFixed(1)} KB
+              </span>
+              <button
+                type="button"
+                className="exam-builder__file-info-remove"
+                onClick={() => setImportFile(null)}
+              >
+                Xóa
+              </button>
+            </div>
+          )}
+
+          <div className="exam-builder__footer-actions">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setImportModalOpen(false);
+                setImportFile(null);
+              }}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              disabled={!importFile || importLoading}
+              onClick={() => void handleImportSubmit()}
+            >
+              {importLoading ? "Đang xử lý..." : "Import đề thi"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── AI Generation Modal ── */}
+      <Modal
+        open={aiModalOpen}
+        title="Sinh đề thi bằng AI"
+        description="AI sẽ tự động tạo câu hỏi trắc nghiệm dựa trên môn học và cấu hình bạn chọn."
+        size="lg"
+        onClose={() => {
+          setAiModalOpen(false);
+          setAiPrompt("");
+        }}
+      >
+        <div className="exam-builder__ai-modal">
+          <div className="exam-builder__grid">
+            <label className="ui-form-field">
+              <span className="ui-form-field__label">Số lượng câu hỏi</span>
+              <input
+                className="ui-form-field__control"
+                type="number"
+                min={1}
+                max={100}
+                value={aiQuestionCount}
+                onChange={(e) => setAiQuestionCount(Number(e.target.value))}
+              />
+            </label>
+            <label className="ui-form-field">
+              <span className="ui-form-field__label">Độ khó</span>
+              <select
+                className="ui-form-field__control"
+                value={aiDifficulty}
+                onChange={(e) => setAiDifficulty(Number(e.target.value))}
+              >
+                <option value={1}>Dễ</option>
+                <option value={2}>Trung bình</option>
+                <option value={3}>Khó</option>
+              </select>
+            </label>
+          </div>
+
+          <label className="ui-form-field">
+            <span className="ui-form-field__label">
+              Yêu cầu bổ sung cho AI (tuỳ chọn)
+            </span>
+            <textarea
+              className="ui-form-field__control"
+              rows={4}
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              placeholder="VD: Tập trung vào chương 3, câu hỏi ứng dụng thực tế, tránh câu hỏi quá dễ..."
+            />
+          </label>
+
+          <div className="exam-builder__ai-info">
+            <IoSparklesOutline />
+            <span>
+              AI sẽ sinh <strong>{aiQuestionCount}</strong> câu hỏi{" "}
+              <strong>{getDifficultyLabel(aiDifficulty)}</strong> cho môn học đã
+              chọn.
+            </span>
+          </div>
+
+          <div className="exam-builder__footer-actions">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setAiModalOpen(false);
+                setAiPrompt("");
+              }}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              disabled={aiLoading}
+              onClick={() => void handleAiGenerate()}
+            >
+              {aiLoading ? "Đang sinh đề..." : "Sinh đề thi"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Draft Preview Modal ── */}
+      <Modal
+        open={draftModalOpen}
+        title={`Kết quả ${draftResult?.source === "gemini" ? "sinh đề AI" : "import file"}`}
+        description={`${draftResult?.totalQuestions ?? 0} câu hỏi đã được tạo. Xem lại trước khi thêm vào đề thi.`}
+        size="lg"
+        onClose={() => {
+          setDraftModalOpen(false);
+          setDraftResult(null);
+        }}
+      >
+        <div className="exam-builder__draft-preview">
+          {draftResult && (
+            <>
+              <div className="exam-builder__draft-stats">
+                <span className="exam-builder__draft-stat">
+                  <BiQuestionMark /> {draftResult.totalQuestions} câu hỏi
+                </span>
+                <span className="exam-builder__draft-stat">
+                  <BiTargetLock /> Nguồn:{" "}
+                  {draftResult.source === "gemini"
+                    ? "AI Gemini"
+                    : "File import"}
+                </span>
+                {draftResult.examId && (
+                  <span className="exam-builder__draft-stat">
+                    <BiCheckCircle /> Đã lưu vào hệ thống
+                  </span>
+                )}
+              </div>
+
+              <div className="exam-builder__draft-list">
+                {draftResult.draft.questions.map((question, index) => (
+                  <DraftQuestionPreview
+                    key={index}
+                    question={question}
+                    index={index}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+
+          <div className="exam-builder__footer-actions">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setDraftModalOpen(false);
+                setDraftResult(null);
+              }}
+            >
+              Hủy
+            </Button>
+            <Button type="button" onClick={() => void applyDraftToExam()}>
+              {draftResult?.examId ? "Xem đề thi" : "Thêm câu hỏi vào đề"}
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

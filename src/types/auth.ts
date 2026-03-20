@@ -4,12 +4,12 @@ export interface LoginRequest {
     password: string
 }
 export interface RegisterRequest {
-    username: string
     email: string
     password: string
-    confirmPassword: string
+    username?: string
+    fullName?: string
 }
-// User info trả về từ BE (UserDto)
+// User info trả về từ BE (UserInfoDto)
 export interface UserInfo {
     id: string
     username: string
@@ -21,10 +21,11 @@ export interface UserInfo {
     roles: string[]
 }
 
-// BE trả về bọc trong ApiResponse<{ access_token, expires_in, user }>
+// BE trả về AuthResponseDto: { accessToken, refreshToken, expiresAt, user }
 export interface AuthApiData {
     access_token: string
-    expires_in: number
+    refresh_token: string
+    expires_at: string
     user: UserInfo
 }
 
@@ -45,6 +46,7 @@ export interface LoginResponse {
 export interface AuthState {
     user: UserInfo | null
     token: string | null
+    refreshToken: string | null
     isAuthenticated: boolean
     loading: boolean
     error: string | null

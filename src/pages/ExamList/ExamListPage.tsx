@@ -6,6 +6,7 @@ import {
   IoTrashOutline,
   IoShareOutline,
   IoCloudUploadOutline,
+  IoPlayCircleOutline,
 } from "react-icons/io5";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -41,6 +42,8 @@ const ExamListPage = () => {
   const { exams, loading, error } = useAppSelector(
     (state: RootState) => state.exam,
   );
+
+  console.log("exams", exams);
   const { targets, assigning } = useAppSelector(
     (state: RootState) => state.assignment,
   );
@@ -215,10 +218,22 @@ const ExamListPage = () => {
                     size="sm"
                     variant="outline"
                     iconLeft={<IoEyeOutline />}
-                    onClick={() => navigate(`/exams/${row.id}/preview`)}
+                    onClick={() =>
+                      navigate(canCreate ? `/exams/${row.id}/preview` : `/exam/${row.id}`)
+                    }
                   >
-                    Xem
+                    {canCreate ? "Xem trước" : "Chi tiết"}
                   </Button>
+                  {!canCreate && normalizeExamStatus(row.status) === "Published" && (
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      iconLeft={<IoPlayCircleOutline />}
+                      onClick={() => navigate(`/do-exam/${row.id}`)}
+                    >
+                      Vào thi
+                    </Button>
+                  )}
                   {canCreate && (
                     <>
                       <Button

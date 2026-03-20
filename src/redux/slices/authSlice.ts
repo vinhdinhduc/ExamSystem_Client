@@ -6,6 +6,7 @@ import { storage } from '../../utils/storage'
 const initialState: AuthState = {
     user: storage.getUser() as UserInfo | null,
     token: storage.getToken(),
+    refreshToken: storage.getRefreshToken(),
     isAuthenticated: Boolean(storage.getToken()),
     loading: false,
     error: null,
@@ -13,13 +14,13 @@ const initialState: AuthState = {
 
 // Thunk: Login
 export const login = createAsyncThunk<
-    { token: string; user: UserInfo },
+    { token: string; refreshToken: string; user: UserInfo },
     LoginRequest,
     { rejectValue: string }
 >('auth/login', async (payload, thunkApi) => {
     try {
         const data = await authService.login(payload)
-        return { token: data.access_token, user: data.user }
+        return { token: data.accessToken, refreshToken: data.refreshToken, user: data.user }
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Đăng nhập thất bại'
         return thunkApi.rejectWithValue(message)
@@ -96,13 +97,13 @@ export const logoutAsync = createAsyncThunk<void, void, { rejectValue: string }>
 
 // Thunk: Refresh token (gọi khi access token sắp hết hạn)
 export const refreshToken = createAsyncThunk<
-    { token: string; user: UserInfo },
+    { token: string; refreshToken: string; user: UserInfo },
     void,
     { rejectValue: string }
 >('auth/refreshToken', async (_, thunkApi) => {
     try {
         const data = await authService.refreshToken()
-        return { token: data.access_token, user: data.user }
+        return { token: data.accessToken, refreshToken: data.refreshToken, user: data.user }
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Phiên đăng nhập hết hạn'
         return thunkApi.rejectWithValue(message)
@@ -116,13 +117,18 @@ const authSlice = createSlice({
         logout: (state) => {
             state.user = null
             state.token = null
+            state.refreshToken = null
             state.isAuthenticated = false
             state.error = null
             storage.clearAuth()
         },
-        setCredentials: (state, action: PayloadAction<{ user: UserInfo; token: string }>) => {
+        setCredentials: (state, action: PayloadAction<{ user: UserInfo; token: string; refreshToken?: string }>) => {
             state.user = action.payload.user
             state.token = action.payload.token
+            if (action.payload.refreshToken) {
+                state.refreshToken = action.payload.refreshToken
+                storage.setRefreshToken(action.payload.refreshToken)
+            }
             state.isAuthenticated = true
             storage.setToken(action.payload.token)
             storage.setUser(action.payload.user)
@@ -142,8 +148,10 @@ const authSlice = createSlice({
                 state.loading = false
                 state.user = action.payload.user
                 state.token = action.payload.token
+                state.refreshToken = action.payload.refreshToken
                 state.isAuthenticated = true
                 storage.setToken(action.payload.token)
+                storage.setRefreshToken(action.payload.refreshToken)
                 storage.setUser(action.payload.user)
             })
             .addCase(login.rejected, (state, action) => {
@@ -170,6 +178,7 @@ const authSlice = createSlice({
             .addCase(logoutAsync.fulfilled, (state) => {
                 state.user = null
                 state.token = null
+                state.refreshToken = null
                 state.isAuthenticated = false
                 state.error = null
                 storage.clearAuth()
@@ -179,14 +188,17 @@ const authSlice = createSlice({
         builder
             .addCase(refreshToken.fulfilled, (state, action) => {
                 state.token = action.payload.token
+                state.refreshToken = action.payload.refreshToken
                 state.user = action.payload.user
                 state.isAuthenticated = true
                 storage.setToken(action.payload.token)
+                storage.setRefreshToken(action.payload.refreshToken)
                 storage.setUser(action.payload.user)
             })
             .addCase(refreshToken.rejected, (state) => {
                 state.user = null
                 state.token = null
+                state.refreshToken = null
                 state.isAuthenticated = false
                 storage.clearAuth()
             })

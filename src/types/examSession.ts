@@ -26,7 +26,42 @@ export interface SubmitExamResult {
     status: number
 }
 
+export interface ExamSessionReviewOption {
+    id: number
+    content: string
+    imageUrl?: string | null
+    orderIndex: number
+    isSelected: boolean
+    isCorrect: boolean | null
+}
+
+export interface ExamSessionReviewQuestion {
+    questionId: string
+    content: string
+    explanation?: string | null
+    orderIndex: number
+    score: number
+    isCorrect: boolean
+    selectedAnswerIds: number[]
+    correctAnswerIds: number[]
+    options: ExamSessionReviewOption[]
+}
+
+export interface ExamSessionReviewResult {
+    sessionId: string
+    examId: string
+    userId: string
+    examTitle: string
+    score: number
+    isPassed: boolean
+    totalCorrect: number
+    startedAt: string
+    submittedAt: string
+    questions: ExamSessionReviewQuestion[]
+}
+
 export interface ExamSessionState {
+    starting: boolean
     sessionId: string | null
     startedAt: string | null
     expiresAt: string | null

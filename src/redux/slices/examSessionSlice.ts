@@ -4,6 +4,7 @@ import type { ExamSessionState, StartExamResponse, SubmitExamResult } from '../.
 import type { RootState } from '../store'
 
 const initialState: ExamSessionState = {
+    starting: false,
     sessionId: null,
     startedAt: null,
     expiresAt: null,
@@ -20,7 +21,7 @@ const initialState: ExamSessionState = {
 
 export const startExamSession = createAsyncThunk<
     StartExamResponse,
-    { examId: string; userId: string; accessCode?: string | null },
+    { examId: string; userId?: string; accessCode?: string | null },
     { rejectValue: string }
 >('examSession/start', async ({ examId, userId, accessCode }, thunkApi) => {
     try {
@@ -36,7 +37,7 @@ export const autosaveSession = createAsyncThunk<void, void, { state: RootState; 
     async (_, thunkApi) => {
         const state = thunkApi.getState().examSession
         const userId = thunkApi.getState().auth.user?.id
-        if (!state.sessionId || !userId) {
+        if (!state.sessionId) {
             return
         }
 
@@ -63,9 +64,6 @@ export const submitExamSession = createAsyncThunk<
     { state: RootState; rejectValue: string }
 >('examSession/submit', async (sessionId, thunkApi) => {
     const userId = thunkApi.getState().auth.user?.id
-    if (!userId) {
-        return thunkApi.rejectWithValue('Không xác định được thí sinh. Vui lòng đăng nhập lại.')
-    }
 
     try {
         return await examSessionService.submitSession(sessionId, { userId })
@@ -92,6 +90,7 @@ const examSessionSlice = createSlice({
             state.answers[action.payload.questionId] = action.payload.answerIds
         },
         clearSessionState: (state) => {
+            state.starting = false
             state.sessionId = null
             state.startedAt = null
             state.expiresAt = null
@@ -101,12 +100,19 @@ const examSessionSlice = createSlice({
             state.answers = {}
             state.currentQuestion = 0
             state.remainingTime = 0
+            state.saving = false
+            state.submitting = false
             state.error = null
         },
     },
     extraReducers: (builder) => {
         builder
+            .addCase(startExamSession.pending, (state) => {
+                state.starting = true
+                state.error = null
+            })
             .addCase(startExamSession.fulfilled, (state, action) => {
+                state.starting = false
                 state.sessionId = action.payload.sessionId
                 state.startedAt = action.payload.startedAt
                 state.expiresAt = action.payload.expiresAt
@@ -126,6 +132,10 @@ const examSessionSlice = createSlice({
                 const nowTs = Date.now()
                 state.remainingTime = Math.max(0, Math.floor((expiresAtTs - nowTs) / 1000))
                 state.currentQuestion = 0
+            })
+            .addCase(startExamSession.rejected, (state, action) => {
+                state.starting = false
+                state.error = action.payload ?? 'Không thể bắt đầu ca thi'
             })
             .addCase(autosaveSession.pending, (state) => {
                 state.saving = true

@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import { groupService } from '../../api/services/groupService'
+import type { GroupUpdatePayload } from '../../api/services/groupService'
 import type { Group, GroupPayload, GroupState } from '../../types/group'
 
 const initialState: GroupState = {
@@ -28,6 +29,32 @@ export const createGroup = createAsyncThunk<Group, GroupPayload, { rejectValue: 
             return await groupService.createGroup(payload)
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Không thể tạo nhóm'
+            return thunkApi.rejectWithValue(message)
+        }
+    },
+)
+
+export const updateGroup = createAsyncThunk<
+    Group,
+    { id: number; payload: GroupUpdatePayload },
+    { rejectValue: string }
+>('group/updateGroup', async ({ id, payload }, thunkApi) => {
+    try {
+        return await groupService.updateGroup(id, payload)
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Không thể cập nhật nhóm'
+        return thunkApi.rejectWithValue(message)
+    }
+})
+
+export const deleteGroup = createAsyncThunk<number, number, { rejectValue: string }>(
+    'group/deleteGroup',
+    async (id, thunkApi) => {
+        try {
+            await groupService.deleteGroup(id)
+            return id
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Không thể xóa nhóm'
             return thunkApi.rejectWithValue(message)
         }
     },
@@ -83,6 +110,14 @@ const groupSlice = createSlice({
             })
             .addCase(createGroup.fulfilled, (state, action) => {
                 state.groups = [action.payload, ...state.groups]
+            })
+            .addCase(updateGroup.fulfilled, (state, action) => {
+                state.groups = state.groups.map((group) =>
+                    group.id === action.payload.id ? action.payload : group,
+                )
+            })
+            .addCase(deleteGroup.fulfilled, (state, action) => {
+                state.groups = state.groups.filter((group) => group.id !== action.payload)
             })
             .addCase(addGroupMember.fulfilled, (state, action) => {
                 state.groups = action.payload

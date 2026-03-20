@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   IoAlbumsOutline,
+  IoBarChartOutline,
   IoBookOutline,
   IoGridOutline,
   IoLogOutOutline,
@@ -73,6 +74,11 @@ const AppLayout = () => {
         label: "Đề thi của tôi",
         icon: <IoAlbumsOutline />,
       });
+      items.push({
+        to: "/results",
+        label: "Kết quả đã làm",
+        icon: <IoBarChartOutline />,
+      });
     }
 
     // Teachers see exam management features
@@ -84,6 +90,11 @@ const AppLayout = () => {
           to: "/exams/new",
           label: "Tạo đề thi",
           icon: <IoSchoolOutline />,
+        },
+        {
+          to: "/results",
+          label: "Kết quả học sinh",
+          icon: <IoBarChartOutline />,
         },
         { to: "/groups", label: "Nhóm / lớp", icon: <IoPeopleOutline /> },
       );
@@ -98,6 +109,11 @@ const AppLayout = () => {
           to: "/exams/new",
           label: "Tạo đề thi",
           icon: <IoSchoolOutline />,
+        },
+        {
+          to: "/results",
+          label: "Kết quả học sinh",
+          icon: <IoBarChartOutline />,
         },
         { to: "/groups", label: "Nhóm / lớp", icon: <IoPeopleOutline /> },
         {

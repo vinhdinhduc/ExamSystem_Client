@@ -45,7 +45,7 @@ const RegisterPage = () => {
     }
 
     const result = await dispatch(
-      register({ username, email, password, confirmPassword }),
+      register({ email, password, username: username || undefined }),
     );
     if (register.fulfilled.match(result)) {
       toast.success(
@@ -70,9 +70,8 @@ const RegisterPage = () => {
           id="username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          placeholder="Nhập tên đăng nhập"
+          placeholder="Nhập tên đăng nhập (không bắt buộc)"
           autoComplete="username"
-          required
         />
 
         <label htmlFor="email">Email</label>

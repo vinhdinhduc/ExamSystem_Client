@@ -8,6 +8,9 @@ export interface QuestionOption {
 
 export interface Question {
     id: string
+    examQuestionId?: number
+    examId?: string
+    questionId?: string
     subjectId: number
     content: string
     imageUrl?: string | null
@@ -16,6 +19,8 @@ export interface Question {
     difficultyLevel?: number
     tags?: string | string[] | null
     isActive?: boolean
+    orderIndex?: number
+    score?: number
     options?: QuestionOption[]
     answers?: QuestionOption[]
 }
@@ -32,6 +37,7 @@ export interface QuestionCreateOptionPayload {
     content: string
     isCorrect: boolean
     orderIndex: number
+    imageUrl?: string | null
 }
 
 export interface QuestionCreatePayload {

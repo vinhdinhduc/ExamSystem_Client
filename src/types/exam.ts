@@ -33,6 +33,13 @@ export interface ExamQuestion {
     orderIndex: number
     score: number
 }
+export interface Answer {
+    id: number
+    content: string
+    isCorrect: boolean
+    orderIndex: number
+    imageUrl?: string | null
+}
 
 export interface ExamQuestionCreatePayload {
     questionId: string
@@ -78,4 +85,96 @@ export interface ExamState {
     selectedQuestionIds: string[]
     loading: boolean
     error: string | null
+}
+
+// ── Draft types (from AI generation / file import) ──
+
+export interface ExamOptionDraft {
+    content: string
+    isCorrect: boolean
+    orderIndex: number
+    imageUrl?: string | null
+}
+
+export interface ExamQuestionDraft {
+    content: string
+    explanation?: string | null
+    questionType: number
+    difficultyLevel: number
+    score: number
+    orderIndex: number
+    options: ExamOptionDraft[]
+}
+
+export interface ExamDraft {
+    title: string
+    description?: string | null
+    instructions?: string | null
+    duration: number
+    passScore: number
+    maxAttempts: number
+    shuffleQuestions: boolean
+    shuffleAnswers: boolean
+    showResultAfter: boolean
+    showCorrectAnswer: boolean
+    status: number
+    startDate?: string | null
+    endDate?: string | null
+    accessCode?: string | null
+    questions: ExamQuestionDraft[]
+}
+
+export interface ExamAuthoringResult {
+    examId?: string | null
+    source: string
+    totalQuestions: number
+    draft: ExamDraft
+}
+
+// ── AI generation request ──
+
+export interface GenerateExamWithGeminiRequest {
+    subjectId: number
+    createdByUserId: string
+    title: string
+    description?: string | null
+    instructions?: string | null
+    questionCount: number
+    difficultyLevel: number
+    duration: number
+    passScore: number
+    maxAttempts: number
+    shuffleQuestions: boolean
+    shuffleAnswers: boolean
+    showResultAfter: boolean
+    showCorrectAnswer: boolean
+    status: number
+    startDate?: string | null
+    endDate?: string | null
+    accessCode?: string | null
+    additionalPrompt?: string | null
+    saveToDatabase?: boolean
+}
+
+// ── File import request (sent as FormData) ──
+
+export interface ImportExamFromFileRequest {
+    subjectId: number
+    createdByUserId: string
+    title: string
+    description?: string | null
+    instructions?: string | null
+    duration: number
+    passScore: number
+    maxAttempts: number
+    shuffleQuestions: boolean
+    shuffleAnswers: boolean
+    showResultAfter: boolean
+    showCorrectAnswer: boolean
+    status: number
+    startDate?: string | null
+    endDate?: string | null
+    accessCode?: string | null
+    file: File
+    saveToDatabase?: boolean
 }

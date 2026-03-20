@@ -1,6 +1,8 @@
 export interface GroupMember {
     groupId: number
     userId: string
+    fullName: string
+    email: string
     joinedAt: string
 }
 

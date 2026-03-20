@@ -1,5 +1,6 @@
 import axiosClient from '../axiosClient'
 import type { ApiResponse, AuthApiData, LoginRequest, RegisterRequest } from '../../types/auth'
+import { storage } from '../../utils/storage'
 
 export const authService = {
 
@@ -15,11 +16,13 @@ export const authService = {
     },
 
     logout: async (): Promise<void> => {
-        await axiosClient.post('/auth/logout')
+        const refreshToken = storage.getRefreshToken()
+        await axiosClient.post('/auth/logout', { refreshToken })
     },
 
     refreshToken: async (): Promise<AuthApiData> => {
-        const response = await axiosClient.post<ApiResponse<AuthApiData>>('/auth/refresh')
+        const refreshToken = storage.getRefreshToken()
+        const response = await axiosClient.post<ApiResponse<AuthApiData>>('/auth/refresh', { refreshToken })
         return response.data.data
     },
 

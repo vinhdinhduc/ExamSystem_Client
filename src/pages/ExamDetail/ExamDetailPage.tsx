@@ -51,6 +51,8 @@ const ExamDetailPage = () => {
     (state: RootState) => state.exam,
   );
 
+  console.log("examDetail", examDetail);
+
   useEffect(() => {
     if (id) void dispatch(fetchExamById(id));
   }, [dispatch, id]);

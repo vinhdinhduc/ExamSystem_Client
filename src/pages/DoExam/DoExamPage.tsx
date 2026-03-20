@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   IoArrowBackOutline,
   IoArrowForwardOutline,
@@ -6,15 +6,15 @@ import {
 } from "react-icons/io5";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
-import Button from "../../components/ui/Button";
-import Card from "../../components/ui/Card";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import ExamTimer from "../../components/exam/ExamTimer";
 import QuestionCard from "../../components/exam/QuestionCard";
 import QuestionPalette from "../../components/exam/QuestionPalette";
+import Button from "../../components/ui/Button";
+import Card from "../../components/ui/Card";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 import { useAppDispatch, useAppSelector } from "../../hooks/reduxHooks";
 import { fetchExamById } from "../../redux/slices/examSlice";
-import { fetchQuestionsByExamId } from "../../redux/slices/questionSlice";
 import {
   autosaveSession,
   clearSessionState,
@@ -24,7 +24,9 @@ import {
   startExamSession,
   submitExamSession,
 } from "../../redux/slices/examSessionSlice";
+import { fetchQuestionsByExamId } from "../../redux/slices/questionSlice";
 import type { RootState } from "../../redux/store";
+import { formatDateTime, normalizeExamStatus } from "../../utils/examUi";
 
 const DoExamPage = () => {
   const { id = "" } = useParams();
@@ -37,6 +39,7 @@ const DoExamPage = () => {
   );
   const { user } = useAppSelector((state: RootState) => state.auth);
   const {
+    starting,
     sessionId,
     answers,
     currentQuestion,
@@ -44,25 +47,77 @@ const DoExamPage = () => {
     submitting,
     questionOrder,
     questionAnswerOrder,
+    error,
   } = useAppSelector((state: RootState) => state.examSession);
 
+  const [isConfirmSubmitOpen, setIsConfirmSubmitOpen] = useState(false);
   const hasAutoSubmitted = useRef(false);
+  const hasAttemptedStartRef = useRef(false);
   const autosaveDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const scheduleBlockMessage = useMemo(() => {
+    if (!examDetail || examDetail.id !== id) {
+      return null;
+    }
+
+    if (normalizeExamStatus(examDetail.status) !== "Published") {
+      return "Đề thi chưa được xuất bản nên chưa thể bắt đầu làm bài.";
+    }
+
+    const normalizedError = (error ?? "").toLowerCase();
+    const notStartedByBackend =
+      normalizedError.includes("not started") ||
+      normalizedError.includes("chưa bắt đầu");
+
+    if (notStartedByBackend && examDetail.startDate) {
+      return `Bài thi chưa mở. Thời gian bắt đầu: ${formatDateTime(examDetail.startDate)}.`;
+    }
+
+    return null;
+  }, [examDetail, error, id]);
+
   useEffect(() => {
-    if (!id || !user?.id) return;
+    if (!id) {
+      return;
+    }
 
     hasAutoSubmitted.current = false;
+    hasAttemptedStartRef.current = false;
+
     void dispatch(fetchExamById(id));
     void dispatch(fetchQuestionsByExamId(id));
-    void dispatch(
-      startExamSession({ examId: id, userId: user.id, accessCode: null }),
-    );
 
     return () => {
       dispatch(clearSessionState());
     };
-  }, [dispatch, id, user?.id]);
+  }, [dispatch, id]);
+
+  useEffect(() => {
+    if (!id || !examDetail || examDetail.id !== id) {
+      return;
+    }
+
+    if (sessionId || starting || hasAttemptedStartRef.current) {
+      return;
+    }
+
+    if (scheduleBlockMessage) {
+      return;
+    }
+
+    hasAttemptedStartRef.current = true;
+    void dispatch(
+      startExamSession({ examId: id, userId: user?.id, accessCode: null }),
+    );
+  }, [
+    dispatch,
+    examDetail,
+    id,
+    scheduleBlockMessage,
+    sessionId,
+    starting,
+    user?.id,
+  ]);
 
   const orderedQuestions = useMemo(() => {
     if (!questions.length) {
@@ -132,12 +187,24 @@ const DoExamPage = () => {
     sessionId,
   ]);
 
+  const handleRetryStartSession = () => {
+    if (!id) return;
+    hasAttemptedStartRef.current = true;
+    void dispatch(
+      startExamSession({ examId: id, userId: user?.id, accessCode: null }),
+    );
+  };
+
   const handleAnswer = (questionId: string, selectedIds: number[]) => {
     dispatch(setSessionAnswer({ questionId, answerIds: selectedIds }));
     if (autosaveDebounce.current) clearTimeout(autosaveDebounce.current);
     autosaveDebounce.current = setTimeout(() => {
       void dispatch(autosaveSession());
     }, 500);
+  };
+
+  const handleManualSubmit = () => {
+    setIsConfirmSubmitOpen(true);
   };
 
   const answeredMap: Record<number, boolean> = {};
@@ -151,7 +218,32 @@ const DoExamPage = () => {
 
   const currentQ = orderedQuestions[currentQuestion] ?? null;
 
-  if (questionsLoading || !sessionId) return <LoadingSpinner />;
+  if (questionsLoading || starting) return <LoadingSpinner />;
+
+  if (!sessionId) {
+    return (
+      <div className="do-exam">
+        <Card>
+          <p className="error-text">
+            {scheduleBlockMessage ??
+              error ??
+              "Không thể khởi tạo ca thi. Vui lòng thử lại hoặc liên hệ quản trị viên."}
+          </p>
+          <div className="do-exam__submit-wrap">
+            <Button
+              onClick={handleRetryStartSession}
+              disabled={Boolean(scheduleBlockMessage)}
+            >
+              Thử lại
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/exams")}>
+              Quay lại danh sách đề
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="do-exam">
@@ -171,6 +263,7 @@ const DoExamPage = () => {
           <>
             <QuestionCard
               question={currentQ}
+              index={currentQuestion + 1}
               value={answers[currentQ.id] ?? []}
               onChange={(ids) => handleAnswer(currentQ.id, ids)}
             />
@@ -228,13 +321,28 @@ const DoExamPage = () => {
               fullWidth
               iconLeft={<IoCheckmarkCircleOutline />}
               disabled={submitting}
-              onClick={() => void handleSubmit()}
+              onClick={handleManualSubmit}
             >
               {submitting ? "Đang nộp..." : "Nộp bài"}
             </Button>
           </div>
         </Card>
       </div>
+
+      <ConfirmModal
+        open={isConfirmSubmitOpen}
+        title="Xác nhận nộp bài"
+        message={`Bạn đã trả lời ${answeredCount}/${orderedQuestions.length} câu hỏi. Bạn có chắc chắn muốn nộp bài ngay bây giờ không?`}
+        confirmLabel="Nộp bài"
+        cancelLabel="Quay lại làm tiếp"
+        variant="primary"
+        loading={submitting}
+        onConfirm={() => {
+          setIsConfirmSubmitOpen(false);
+          void handleSubmit();
+        }}
+        onCancel={() => setIsConfirmSubmitOpen(false)}
+      />
     </div>
   );
 };

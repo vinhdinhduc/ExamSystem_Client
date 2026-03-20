@@ -55,14 +55,17 @@ function processPendingQueue(error: unknown, token: string | null) {
 
 async function doRefresh(): Promise<string> {
     // Gọi thẳng axios để tránh circular qua interceptor
+    const currentRefreshToken = storage.getRefreshToken()
     const res = await axios.post<ApiResponse<AuthApiData>>(
-        `${BASE_URL}/api/v1/auth/refresh`,
-        {},
+        `${BASE_URL}/auth/refresh`,
+        { refreshToken: currentRefreshToken },
         { withCredentials: true },
     )
     const newToken = res.data.data.access_token
+    const newRefreshToken = res.data.data.refresh_token
     const user = res.data.data.user
     storage.setToken(newToken)
+    if (newRefreshToken) storage.setRefreshToken(newRefreshToken)
     storage.setUser(user)
     return newToken
 }
@@ -108,7 +111,6 @@ axiosClient.interceptors.request.use(
             }
         }
 
-        // Token sắp hết hạn (< 60s) — refresh proactively, không block request
         if (isTokenExpiringSoon(token)) {
             if (!isRefreshing) {
                 isRefreshing = true
