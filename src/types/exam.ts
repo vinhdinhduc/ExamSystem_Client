@@ -178,3 +178,10 @@ export interface ImportExamFromFileRequest {
     file: File
     saveToDatabase?: boolean
 }
+
+export interface SaveExamDraftRequest {
+    subjectId: number
+    createdByUserId: string
+    source?: string
+    draft: ExamDraft
+}

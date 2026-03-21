@@ -6,6 +6,7 @@ import type {
     ExamQuestionCreatePayload,
     GenerateExamWithGeminiRequest,
     ImportExamFromFileRequest,
+    SaveExamDraftRequest,
     StudentAssignedExam,
 } from '../../types/exam'
 import type { ApiResponse, PaginatedResult } from '../../types/api'
@@ -188,6 +189,14 @@ export const examService = {
             '/exam-authoring/import',
             formData,
             { headers: { 'Content-Type': 'multipart/form-data' } },
+        )
+        return unwrapApiData(response.data)
+    },
+    saveDraft: async (request: SaveExamDraftRequest): Promise<ExamAuthoringResult> => {
+        const response = await axiosClient.post<ApiResponse<ExamAuthoringResult> | ExamAuthoringResult>(
+            '/exam-authoring/save-draft',
+            request,
+            { timeout: 120000 },
         )
         return unwrapApiData(response.data)
     },

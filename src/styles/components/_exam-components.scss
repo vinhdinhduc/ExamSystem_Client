@@ -235,7 +235,7 @@
 .question-preview {
     @include card;
     padding: 1.25rem 1.5rem;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0;
 
     &__badges {
         display: flex;
@@ -277,10 +277,18 @@
         }
     }
 
+    &__option-icon {
+        display: inline-flex;
+        align-items: center;
+        color: color.adjust($color-secondary, $lightness: -10%);
+        font-size: 1rem;
+    }
+
     &__option--correct {
         border-color: $color-secondary;
-        background: rgba($color-secondary, 0.08);
+        background: rgba($color-secondary, 0.14);
         color: color.adjust($color-secondary, $lightness: -15%);
+        font-weight: 600;
 
         &::before {
             content: "✓";

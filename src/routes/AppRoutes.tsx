@@ -25,6 +25,7 @@ import SubjectManagementPage from "../pages/SubjectManagement/SubjectManagementP
 import ExamBuilderPage from "../pages/ExamBuilder/ExamBuilderPage";
 import ExamPreviewPage from "../pages/ExamBuilder/ExamPreviewPage";
 import GroupManagementPage from "../pages/GroupManagement/GroupManagementPage";
+import QuestionManagementPage from "../pages/QuestionManagement/QuestionManagementPage";
 import RolesPermissionsPage from "../pages/Admin/RolesPermissionsPage";
 import UserManagementPage from "../pages/UserManagement/UserManagementPage";
 import ProfilePage from "../pages/Profile/ProfilePage";
@@ -76,6 +77,7 @@ const AppRoutes = () => {
             <Route path="/exams/new" element={<ExamBuilderPage />} />
             <Route path="/exams/:id/edit" element={<ExamBuilderPage />} />
             <Route path="/exams/:id/preview" element={<ExamPreviewPage />} />
+            <Route path="/questions" element={<QuestionManagementPage />} />
             <Route path="/groups" element={<GroupManagementPage />} />
           </Route>
         </Route>

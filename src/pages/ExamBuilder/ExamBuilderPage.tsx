@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -8,7 +8,9 @@ import {
   IoDownloadOutline,
   IoFilterOutline,
   IoListOutline,
+  IoSaveOutline,
   IoSparklesOutline,
+  IoTrashOutline,
 } from "react-icons/io5";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
@@ -31,8 +33,10 @@ import {
 } from "../../redux/slices/questionSlice";
 import type { RootState } from "../../redux/store";
 import type {
+  ExamDraft,
   ExamPayload,
   ExamAuthoringResult,
+  ExamOptionDraft,
   ExamQuestionDraft,
 } from "../../types/exam";
 import type { QuestionCreatePayload } from "../../types/question";
@@ -138,7 +142,7 @@ const ExamBuilderPage = () => {
 
   const { bank } = useAppSelector((state: RootState) => state.question);
   const { user } = useAppSelector((state: RootState) => state.auth);
-
+  console.log("Question bank", bank);
   const [tab, setTab] = useState<BuilderTab>(tabs[0]);
   const [keyword, setKeyword] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "0" | "1" | "2">("all");
@@ -167,6 +171,8 @@ const ExamBuilderPage = () => {
   const [draftResult, setDraftResult] = useState<ExamAuthoringResult | null>(
     null,
   );
+  const [draftEditor, setDraftEditor] = useState<ExamDraft | null>(null);
+  const [draftSaving, setDraftSaving] = useState(false);
   const [draftModalOpen, setDraftModalOpen] = useState(false);
 
   const {
@@ -357,6 +363,7 @@ const ExamBuilderPage = () => {
         saveToDatabase: true,
       });
       setDraftResult(result);
+      setDraftEditor(null);
       setImportModalOpen(false);
       setImportFile(null);
       setDraftModalOpen(true);
@@ -429,12 +436,11 @@ const ExamBuilderPage = () => {
         endDate: formValues.endDate || null,
         accessCode: formValues.accessCode || null,
         additionalPrompt: aiPrompt || null,
-        saveToDatabase: true,
+        saveToDatabase: false,
       });
 
-      console.log("Check result gemini", result);
-
       setDraftResult(result);
+      setDraftEditor(result.draft);
       setAiModalOpen(false);
       setAiPrompt("");
       setDraftModalOpen(true);
@@ -448,69 +454,270 @@ const ExamBuilderPage = () => {
     }
   };
 
-  const applyDraftToExam = async () => {
-    if (!draftResult) return;
+  const resetDraftState = () => {
+    setDraftModalOpen(false);
+    setDraftResult(null);
+    setDraftEditor(null);
+    setDraftSaving(false);
+  };
 
-    const draft = draftResult.draft;
+  const addDraftQuestion = () => {
+    setDraftEditor((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        questions: [
+          ...prev.questions,
+          {
+            content: "",
+            explanation: "",
+            questionType: 0,
+            difficultyLevel: 1,
+            score: 1,
+            orderIndex: prev.questions.length + 1,
+            options: [
+              { content: "", isCorrect: true, orderIndex: 0, imageUrl: null },
+              {
+                content: "",
+                isCorrect: false,
+                orderIndex: 1,
+                imageUrl: null,
+              },
+            ],
+          },
+        ],
+      };
+    });
+  };
 
-    if (draftResult.examId) {
-      toast.success("Đề thi đã được lưu thành công!");
-      setDraftModalOpen(false);
-      setDraftResult(null);
-      navigate(`/exams/${draftResult.examId}/preview`);
+  const removeDraftQuestion = (questionIndex: number) => {
+    setDraftEditor((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        questions: prev.questions
+          .filter((_, index) => index !== questionIndex)
+          .map((question, index) => ({ ...question, orderIndex: index + 1 })),
+      };
+    });
+  };
+
+  const updateDraftQuestion = (
+    questionIndex: number,
+    updater: (question: ExamQuestionDraft) => ExamQuestionDraft,
+  ) => {
+    setDraftEditor((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        questions: prev.questions.map((question, index) =>
+          index === questionIndex ? updater(question) : question,
+        ),
+      };
+    });
+  };
+
+  const setDraftQuestionType = (
+    questionIndex: number,
+    questionType: number,
+  ) => {
+    updateDraftQuestion(questionIndex, (question) => {
+      if (questionType === 2) {
+        return {
+          ...question,
+          questionType,
+          options: [
+            { content: "Đúng", isCorrect: true, orderIndex: 0, imageUrl: null },
+            {
+              content: "Sai",
+              isCorrect: false,
+              orderIndex: 1,
+              imageUrl: null,
+            },
+          ],
+        };
+      }
+
+      const normalizedOptions =
+        question.options.length >= 2
+          ? question.options
+          : [
+              ...question.options,
+              {
+                content: "",
+                isCorrect: false,
+                orderIndex: question.options.length,
+                imageUrl: null,
+              },
+            ];
+
+      return {
+        ...question,
+        questionType,
+        options: normalizedOptions.map((option, optionIndex) => ({
+          ...option,
+          orderIndex: optionIndex,
+          isCorrect:
+            questionType !== 1 && optionIndex > 0
+              ? false
+              : Boolean(option.isCorrect),
+        })),
+      };
+    });
+  };
+
+  const toggleDraftCorrectOption = (
+    questionIndex: number,
+    optionIndex: number,
+  ) => {
+    updateDraftQuestion(questionIndex, (question) => {
+      const isMultipleChoice = question.questionType === 1;
+      return {
+        ...question,
+        options: question.options.map((option, index) => ({
+          ...option,
+          isCorrect: isMultipleChoice
+            ? index === optionIndex
+              ? !option.isCorrect
+              : option.isCorrect
+            : index === optionIndex,
+        })),
+      };
+    });
+  };
+
+  const addDraftOption = (questionIndex: number) => {
+    updateDraftQuestion(questionIndex, (question) => {
+      if (question.questionType === 2) return question;
+      return {
+        ...question,
+        options: [
+          ...question.options,
+          {
+            content: "",
+            isCorrect: false,
+            orderIndex: question.options.length,
+            imageUrl: null,
+          },
+        ],
+      };
+    });
+  };
+
+  const removeDraftOption = (questionIndex: number, optionIndex: number) => {
+    updateDraftQuestion(questionIndex, (question) => {
+      if (question.questionType === 2) return question;
+      const remaining = question.options
+        .filter((_, index) => index !== optionIndex)
+        .map((option, index) => ({ ...option, orderIndex: index }));
+
+      if (remaining.length === 0) {
+        return {
+          ...question,
+          options: [
+            { content: "", isCorrect: true, orderIndex: 0, imageUrl: null },
+            {
+              content: "",
+              isCorrect: false,
+              orderIndex: 1,
+              imageUrl: null,
+            },
+          ],
+        };
+      }
+
+      return {
+        ...question,
+        options: remaining,
+      };
+    });
+  };
+
+  const normalizeDraftForSave = (draft: ExamDraft): ExamDraft => ({
+    ...draft,
+    title: draft.title.trim(),
+    description: draft.description?.trim() || null,
+    instructions: draft.instructions?.trim() || null,
+    questions: draft.questions.map((question, questionIndex) => {
+      const normalizedOptions: ExamOptionDraft[] = question.options
+        .map((option, optionIndex) => ({
+          content: option.content.trim(),
+          isCorrect: Boolean(option.isCorrect),
+          orderIndex: optionIndex,
+          imageUrl: option.imageUrl ?? null,
+        }))
+        .filter((option) => option.content.length > 0);
+
+      return {
+        ...question,
+        content: question.content.trim(),
+        explanation: question.explanation?.trim() || null,
+        orderIndex: questionIndex + 1,
+        options: normalizedOptions,
+      };
+    }),
+  });
+
+  const saveEditedDraft = async () => {
+    if (!draftEditor || !subjectId || !user?.id) {
+      toast.error("Thiếu dữ liệu để lưu đề từ nháp AI");
       return;
     }
 
-    // Otherwise, populate the form with draft data
-    setExamValue("title", draft.title);
-    if (draft.description) setExamValue("description", draft.description);
-    if (draft.instructions) setExamValue("instructions", draft.instructions);
-    setExamValue("duration", draft.duration);
-    setExamValue("passScore", draft.passScore);
-    setExamValue("maxAttempts", draft.maxAttempts);
-    setExamValue("shuffleQuestions", draft.shuffleQuestions);
-    setExamValue("shuffleAnswers", draft.shuffleAnswers);
-    setExamValue("showResultAfter", draft.showResultAfter);
-    setExamValue("showCorrectAnswer", draft.showCorrectAnswer);
+    const normalizedDraft = normalizeDraftForSave(draftEditor);
 
-    // Create questions from draft and add to bank
-    if (user?.id && subjectId) {
-      const newQuestionIds: string[] = [];
-      for (const draftQ of draft.questions) {
-        const payload: QuestionCreatePayload = {
-          subjectId,
-          createdByUserId: user.id,
-          content: draftQ.content,
-          explanation: draftQ.explanation || null,
-          questionType: draftQ.questionType,
-          difficultyLevel: draftQ.difficultyLevel,
-          tags: null,
-          isActive: true,
-          options: draftQ.options.map((opt) => ({
-            content: opt.content,
-            isCorrect: opt.isCorrect,
-            orderIndex: opt.orderIndex,
-            imageUrl: opt.imageUrl || null,
-          })),
-        };
-        const result = await dispatch(createQuestion(payload));
-        if (createQuestion.fulfilled.match(result)) {
-          newQuestionIds.push(result.payload.id);
-        }
-      }
-
-      if (newQuestionIds.length > 0) {
-        dispatch(
-          setSelectedQuestionIds([...selectedQuestionIds, ...newQuestionIds]),
-        );
-        void dispatch(fetchQuestionBank(subjectId));
-        toast.success(`Đã thêm ${newQuestionIds.length} câu hỏi vào đề!`);
-      }
+    if (!normalizedDraft.title) {
+      toast.error("Vui lòng nhập tiêu đề đề thi");
+      return;
     }
 
-    setDraftModalOpen(false);
-    setDraftResult(null);
-    setTab("Câu hỏi");
+    if (normalizedDraft.questions.length === 0) {
+      toast.error("Nháp đề cần ít nhất 1 câu hỏi");
+      return;
+    }
+
+    const hasInvalidQuestion = normalizedDraft.questions.some((question) => {
+      if (!question.content.trim()) return true;
+      if (question.options.length < 2) return true;
+      const correctCount = question.options.filter(
+        (option) => option.isCorrect,
+      ).length;
+      if (correctCount === 0) return true;
+      if (question.questionType !== 1 && correctCount > 1) return true;
+      return false;
+    });
+
+    if (hasInvalidQuestion) {
+      toast.error(
+        "Vui lòng kiểm tra lại nội dung câu hỏi và đáp án đúng trong bản nháp",
+      );
+      return;
+    }
+
+    setDraftSaving(true);
+    try {
+      const saved = await examService.saveDraft({
+        subjectId,
+        createdByUserId: user.id,
+        source: "gemini-edited",
+        draft: normalizedDraft,
+      });
+
+      if (!saved.examId) {
+        toast.error("Lưu đề thi thất bại: không nhận được examId");
+        return;
+      }
+
+      toast.success("Đã lưu đề thi từ bản nháp AI");
+      resetDraftState();
+      navigate(`/exams/${saved.examId}/preview`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Không thể lưu đề từ bản nháp",
+      );
+    } finally {
+      setDraftSaving(false);
+    }
   };
 
   const onCreateQuestion = handleQuestionSubmit(async (values) => {
@@ -1324,15 +1531,12 @@ const ExamBuilderPage = () => {
       <Modal
         open={draftModalOpen}
         title={`Kết quả ${draftResult?.source === "gemini" ? "sinh đề AI" : "import file"}`}
-        description={`${draftResult?.totalQuestions ?? 0} câu hỏi đã được tạo. Xem lại trước khi thêm vào đề thi.`}
+        description={`${draftResult?.totalQuestions ?? 0} câu hỏi đã được tạo. Bạn có thể chỉnh sửa trước khi lưu đề thi.`}
         size="lg"
-        onClose={() => {
-          setDraftModalOpen(false);
-          setDraftResult(null);
-        }}
+        onClose={resetDraftState}
       >
         <div className="exam-builder__draft-preview">
-          {draftResult && (
+          {draftResult && !draftEditor && (
             <>
               <div className="exam-builder__draft-stats">
                 <span className="exam-builder__draft-stat">
@@ -1363,20 +1567,248 @@ const ExamBuilderPage = () => {
             </>
           )}
 
+          {draftEditor && (
+            <div className="exam-builder__draft-editor">
+              <div className="exam-builder__draft-editor-meta">
+                <FormInput
+                  label="Tên đề thi"
+                  value={draftEditor.title}
+                  onChange={(event: unknown) => {
+                    const nextValue = (event as ChangeEvent<HTMLInputElement>)
+                      .target.value;
+                    setDraftEditor((prev) =>
+                      prev ? { ...prev, title: nextValue } : prev,
+                    );
+                  }}
+                />
+
+                <div className="exam-builder__grid">
+                  <FormInput
+                    label="Thời gian (phút)"
+                    type="number"
+                    min={1}
+                    value={draftEditor.duration}
+                    onChange={(event: unknown) => {
+                      const nextValue = Number(
+                        (event as ChangeEvent<HTMLInputElement>).target.value,
+                      );
+                      setDraftEditor((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              duration: Math.max(1, nextValue),
+                            }
+                          : prev,
+                      );
+                    }}
+                  />
+                  <FormInput
+                    label="Điểm đạt (%)"
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={draftEditor.passScore}
+                    onChange={(event: unknown) => {
+                      const nextValue = Number(
+                        (event as ChangeEvent<HTMLInputElement>).target.value,
+                      );
+                      setDraftEditor((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              passScore: Math.max(0, nextValue),
+                            }
+                          : prev,
+                      );
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="exam-builder__draft-editor-tools">
+                <Button
+                  type="button"
+                  variant="outline"
+                  iconLeft={<IoAddOutline />}
+                  onClick={addDraftQuestion}
+                >
+                  Thêm câu hỏi
+                </Button>
+              </div>
+
+              <div className="exam-builder__draft-list">
+                {draftEditor.questions.map((question, questionIndex) => (
+                  <article
+                    key={questionIndex}
+                    className="exam-builder__draft-edit-item"
+                  >
+                    <div className="exam-builder__draft-edit-head">
+                      <strong>Câu {questionIndex + 1}</strong>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        iconLeft={<IoTrashOutline />}
+                        onClick={() => removeDraftQuestion(questionIndex)}
+                      >
+                        Xóa câu
+                      </Button>
+                    </div>
+
+                    <FormInput
+                      label="Nội dung câu hỏi"
+                      multiline
+                      value={question.content}
+                      onChange={(event: { target: { value: string } }) => {
+                        const nextValue = event.target.value;
+                        updateDraftQuestion(questionIndex, (current) => ({
+                          ...current,
+                          content: nextValue,
+                        }));
+                      }}
+                    />
+
+                    <div className="exam-builder__grid">
+                      <label className="ui-form-field">
+                        <span className="ui-form-field__label">
+                          Loại câu hỏi
+                        </span>
+                        <select
+                          className="ui-form-field__control"
+                          value={question.questionType}
+                          onChange={(event: unknown) => {
+                            const nextValue = Number(
+                              (event as ChangeEvent<HTMLSelectElement>).target
+                                .value,
+                            );
+                            setDraftQuestionType(questionIndex, nextValue);
+                          }}
+                        >
+                          <option value={0}>Một đáp án</option>
+                          <option value={1}>Nhiều đáp án</option>
+                          <option value={2}>Đúng / Sai</option>
+                        </select>
+                      </label>
+                      <label className="ui-form-field">
+                        <span className="ui-form-field__label">Độ khó</span>
+                        <select
+                          className="ui-form-field__control"
+                          value={question.difficultyLevel}
+                          onChange={(event: unknown) => {
+                            const nextValue = Number(
+                              (event as ChangeEvent<HTMLSelectElement>).target
+                                .value,
+                            );
+                            updateDraftQuestion(questionIndex, (current) => ({
+                              ...current,
+                              difficultyLevel: nextValue,
+                            }));
+                          }}
+                        >
+                          <option value={1}>Dễ</option>
+                          <option value={2}>Trung bình</option>
+                          <option value={3}>Khó</option>
+                        </select>
+                      </label>
+                    </div>
+
+                    <div className="exam-builder__draft-options">
+                      {question.options.map((option, optionIndex) => (
+                        <div
+                          key={optionIndex}
+                          className="exam-builder__option-row"
+                        >
+                          <button
+                            type="button"
+                            className={`exam-builder__correct-toggle ${option.isCorrect ? "exam-builder__correct-toggle--active" : ""}`.trim()}
+                            onClick={() =>
+                              toggleDraftCorrectOption(
+                                questionIndex,
+                                optionIndex,
+                              )
+                            }
+                          >
+                            {option.isCorrect ? "Đúng" : "Sai"}
+                          </button>
+                          <input
+                            className="ui-form-field__control"
+                            value={option.content}
+                            readOnly={question.questionType === 2}
+                            onChange={(event: unknown) => {
+                              const nextValue = (
+                                event as ChangeEvent<HTMLInputElement>
+                              ).target.value;
+                              updateDraftQuestion(questionIndex, (current) => ({
+                                ...current,
+                                options: current.options.map((item, index) =>
+                                  index === optionIndex
+                                    ? { ...item, content: nextValue }
+                                    : item,
+                                ),
+                              }));
+                            }}
+                            placeholder={`Đáp án ${optionIndex + 1}`}
+                          />
+                          {question.questionType !== 2 &&
+                            question.options.length > 2 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() =>
+                                  removeDraftOption(questionIndex, optionIndex)
+                                }
+                              >
+                                Xóa
+                              </Button>
+                            )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {question.questionType !== 2 && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        iconLeft={<IoAddOutline />}
+                        onClick={() => addDraftOption(questionIndex)}
+                      >
+                        Thêm đáp án
+                      </Button>
+                    )}
+                  </article>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="exam-builder__footer-actions">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setDraftModalOpen(false);
-                setDraftResult(null);
-              }}
-            >
+            <Button type="button" variant="outline" onClick={resetDraftState}>
               Hủy
             </Button>
-            <Button type="button" onClick={() => void applyDraftToExam()}>
-              {draftResult?.examId ? "Xem đề thi" : "Thêm câu hỏi vào đề"}
-            </Button>
+            {draftEditor ? (
+              <Button
+                type="button"
+                iconLeft={<IoSaveOutline />}
+                disabled={draftSaving}
+                onClick={() => void saveEditedDraft()}
+              >
+                {draftSaving ? "Đang lưu..." : "Lưu đề thi"}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                onClick={() => {
+                  if (draftResult?.examId) {
+                    navigate(`/exams/${draftResult.examId}/preview`);
+                    return;
+                  }
+                  resetDraftState();
+                }}
+              >
+                {draftResult?.examId ? "Xem đề thi" : "Đóng"}
+              </Button>
+            )}
           </div>
         </div>
       </Modal>

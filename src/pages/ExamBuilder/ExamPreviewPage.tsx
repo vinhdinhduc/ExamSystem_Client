@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { IoCheckmarkCircleOutline, IoTimeOutline } from "react-icons/io5";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -8,8 +8,12 @@ import Badge from "../../components/ui/Badge";
 import QuestionPreview from "../../components/exam/QuestionPreview";
 import { useAppDispatch, useAppSelector } from "../../hooks/reduxHooks";
 import { fetchExamById, publishExam } from "../../redux/slices/examSlice";
-import { fetchQuestionsByExamId } from "../../redux/slices/questionSlice";
+import {
+  fetchQuestionBank,
+  fetchQuestionsByExamId,
+} from "../../redux/slices/questionSlice";
 import type { RootState } from "../../redux/store";
+import type { Question } from "../../types/question";
 import {
   formatDuration,
   getExamStatusLabel,
@@ -25,13 +29,86 @@ const ExamPreviewPage = () => {
     (state: RootState) => state.exam,
   );
   const { user } = useAppSelector((state: RootState) => state.auth);
-  const { questions } = useAppSelector((state: RootState) => state.question);
+  const { questions, bank } = useAppSelector(
+    (state: RootState) => state.question,
+  );
 
   useEffect(() => {
     if (!id) return;
     void dispatch(fetchExamById(id));
     void dispatch(fetchQuestionsByExamId(id));
   }, [dispatch, id]);
+
+  useEffect(() => {
+    if (!examDetail?.subjectId) return;
+    void dispatch(fetchQuestionBank(examDetail.subjectId));
+  }, [dispatch, examDetail?.subjectId]);
+
+  const previewQuestions = useMemo<Question[]>(() => {
+    const mapCorrectOptions = (
+      sourceQuestion: Question,
+      bankQuestion: Question,
+    ): Question => {
+      const sourceOptions = sourceQuestion.options ?? [];
+      const bankOptions = bankQuestion.options ?? [];
+
+      if (sourceOptions.length === 0 || bankOptions.length === 0) {
+        return sourceQuestion;
+      }
+
+      const bankById = new Map(
+        bankOptions.map((option) => [option.id, option]),
+      );
+      const bankByOrder = new Map(
+        bankOptions.map((option, index) => [
+          option.orderIndex ?? index,
+          option,
+        ]),
+      );
+      const bankByContent = new Map(
+        bankOptions.map((option) => [
+          option.content.trim().toLowerCase(),
+          option,
+        ]),
+      );
+
+      const mergedOptions = sourceOptions.map((option, index) => {
+        const byId = bankById.get(option.id);
+        const byOrder = bankByOrder.get(option.orderIndex ?? index);
+        const byContent = bankByContent.get(
+          option.content.trim().toLowerCase(),
+        );
+        const matched = byId ?? byOrder ?? byContent;
+
+        return {
+          ...option,
+          isCorrect: matched?.isCorrect,
+        };
+      });
+
+      return {
+        ...sourceQuestion,
+        options: mergedOptions,
+        answers: mergedOptions,
+      };
+    };
+
+    return questions.map((question) => {
+      const hasCorrectInQuestion = (question.options ?? []).some(
+        (option) => option.isCorrect !== undefined,
+      );
+
+      if (hasCorrectInQuestion) return question;
+
+      const bankQuestion =
+        bank.find((item) => item.id === question.id) ??
+        bank.find((item) => item.id === question.questionId);
+
+      if (!bankQuestion) return question;
+
+      return mapCorrectOptions(question, bankQuestion);
+    });
+  }, [bank, questions]);
 
   const handlePublish = async () => {
     if (!id || !user?.id) return;
@@ -71,7 +148,9 @@ const ExamPreviewPage = () => {
           <span className="exam-preview__stat">
             <IoTimeOutline /> {formatDuration(examDetail.duration)}
           </span>
-          <span className="exam-preview__stat">{questions.length} câu hỏi</span>
+          <span className="exam-preview__stat">
+            {previewQuestions.length} câu hỏi
+          </span>
           <span className="exam-preview__stat">
             Điểm đạt: {examDetail.passScore}%
           </span>
@@ -81,7 +160,7 @@ const ExamPreviewPage = () => {
 
       <Card title="Danh sách câu hỏi">
         <div className="exam-preview__questions">
-          {questions.map((question, index) => (
+          {previewQuestions.map((question, index) => (
             <QuestionPreview
               key={question.id}
               question={question}

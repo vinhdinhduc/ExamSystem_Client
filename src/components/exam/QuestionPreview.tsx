@@ -1,4 +1,5 @@
 import type { Question } from "../../types/question";
+import { IoCheckmarkCircle } from "react-icons/io5";
 import Badge from "../ui/Badge";
 import {
   getDifficultyLabel,
@@ -13,6 +14,8 @@ interface QuestionPreviewProps {
 
 const QuestionPreview = ({ question, index }: QuestionPreviewProps) => {
   const options = getQuestionOptions(question);
+  console.log("Check option", options);
+  console.log("Question", question);
 
   return (
     <article className="question-preview">
@@ -31,8 +34,19 @@ const QuestionPreview = ({ question, index }: QuestionPreviewProps) => {
       </h4>
       <ul className="question-preview__options">
         {options.map((option) => (
-          <li key={option.id} className="question-preview__option">
+          <li
+            key={option.id}
+            className={`question-preview__option ${option.isCorrect ? "question-preview__option--correct" : ""}`.trim()}
+          >
             {option.content}
+            {option.isCorrect ? (
+              <span
+                className="question-preview__option-icon"
+                aria-label="Đáp án đúng"
+              >
+                <IoCheckmarkCircle />
+              </span>
+            ) : null}
           </li>
         ))}
       </ul>

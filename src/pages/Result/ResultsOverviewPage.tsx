@@ -225,7 +225,7 @@ const ResultsOverviewPage = () => {
                         variant="outline"
                         iconLeft={<IoEyeOutline />}
                       >
-                        Xem bài làm
+                        Xem session
                       </Button>
                     </Link>
                   ) : (

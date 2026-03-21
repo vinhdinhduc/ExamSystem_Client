@@ -4,6 +4,7 @@ import {
   IoBarChartOutline,
   IoBookOutline,
   IoGridOutline,
+  IoHelpCircleOutline,
   IoLogOutOutline,
   IoMenuOutline,
   IoPeopleOutline,
@@ -92,6 +93,11 @@ const AppLayout = () => {
           icon: <IoSchoolOutline />,
         },
         {
+          to: "/questions",
+          label: "Quản lý câu hỏi",
+          icon: <IoHelpCircleOutline />,
+        },
+        {
           to: "/results",
           label: "Kết quả học sinh",
           icon: <IoBarChartOutline />,
@@ -109,6 +115,11 @@ const AppLayout = () => {
           to: "/exams/new",
           label: "Tạo đề thi",
           icon: <IoSchoolOutline />,
+        },
+        {
+          to: "/questions",
+          label: "Quản lý câu hỏi",
+          icon: <IoHelpCircleOutline />,
         },
         {
           to: "/results",
