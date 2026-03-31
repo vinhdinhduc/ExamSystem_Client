@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { IoEyeOutline } from "react-icons/io5";
+import { examMonitoringHub } from "../../api/services/examMonitoringHub";
 import { resultService } from "../../api/services/resultService";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import Badge from "../../components/ui/Badge";
@@ -53,6 +54,16 @@ const ResultsOverviewPage = () => {
     TeacherAssignedExamResultItem[]
   >([]);
   const [selectedExamId, setSelectedExamId] = useState("");
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const refreshTeacherResults = useCallback(async () => {
+    if (!isTeacherOrAdmin) return;
+    const groups = await resultService.getTeacherAssignedResults();
+    setTeacherGroups(groups);
+    if (groups.length > 0) {
+      setSelectedExamId((prev) => prev || groups[0].examId);
+    }
+  }, [isTeacherOrAdmin]);
 
   useEffect(() => {
     let mounted = true;
@@ -91,6 +102,67 @@ const ResultsOverviewPage = () => {
       mounted = false;
     };
   }, [isTeacherOrAdmin]);
+
+  useEffect(() => {
+    if (!isTeacherOrAdmin) {
+      return;
+    }
+
+    let disposed = false;
+
+    const scheduleRefresh = () => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+      }
+
+      refreshTimerRef.current = setTimeout(() => {
+        if (!disposed) {
+          void refreshTeacherResults();
+        }
+      }, 700);
+    };
+
+    const handleProgress = () => {
+      scheduleRefresh();
+    };
+
+    const handleSubmit = () => {
+      scheduleRefresh();
+    };
+
+    let unsubscribeProgress = () => {};
+    let unsubscribeSubmit = () => {};
+
+    const setupRealtime = async () => {
+      try {
+        await examMonitoringHub.connect();
+
+        if (selectedExamId) {
+          await examMonitoringHub.joinExamRoom(selectedExamId);
+        } else {
+          await examMonitoringHub.joinMonitoringRoom();
+        }
+
+        unsubscribeProgress =
+          examMonitoringHub.onStudentProgress(handleProgress);
+        unsubscribeSubmit = examMonitoringHub.onStudentSubmit(handleSubmit);
+      } catch {
+        // Keep page usable even if realtime connection fails.
+      }
+    };
+
+    void setupRealtime();
+
+    return () => {
+      disposed = true;
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+      }
+      unsubscribeProgress();
+      unsubscribeSubmit();
+      void examMonitoringHub.disconnect();
+    };
+  }, [isTeacherOrAdmin, refreshTeacherResults, selectedExamId]);
 
   const selectedTeacherGroup = useMemo(() => {
     if (!isTeacherOrAdmin || teacherGroups.length === 0) return null;

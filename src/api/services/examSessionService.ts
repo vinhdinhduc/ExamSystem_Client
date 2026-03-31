@@ -3,6 +3,10 @@ import type {
     ExamSessionReviewResult,
     StartExamResponse,
     SubmitExamResult,
+    SaveProgressRequest,
+    SaveProgressResponse,
+    ExamViolationRequest,
+    ExamViolationResponse,
 } from '../../types/examSession'
 import type { ApiResponse } from '../../types/api'
 
@@ -21,11 +25,27 @@ export const examSessionService = {
     ): Promise<StartExamResponse> => {
         const response = await axiosClient.post<
             ApiResponse<StartExamResponse> | StartExamResponse
-        >(
-            `/exam-sessions/${examId}/start`,
-            payload
-        )
+        >(`/exam-sessions/${examId}/start`, payload)
 
+        return unwrapApiData(response.data)
+    },
+    saveProgress: async (payload: SaveProgressRequest): Promise<SaveProgressResponse> => {
+        const response = await axiosClient.post<
+            ApiResponse<SaveProgressResponse> | SaveProgressResponse
+        >('/exam/save-progress', payload)
+        return unwrapApiData(response.data)
+    },
+    reportViolation: async (payload: ExamViolationRequest): Promise<ExamViolationResponse> => {
+        const response = await axiosClient.post<
+            ApiResponse<ExamViolationResponse> | ExamViolationResponse
+        >('/exam/violation', payload)
+        return unwrapApiData(response.data)
+    },
+    submitExamV1: async (payload: { sessionId: string; userId?: string }): Promise<SubmitExamResult> => {
+        const response = await axiosClient.post<ApiResponse<SubmitExamResult> | SubmitExamResult>(
+            '/exam/submit',
+            payload,
+        )
         return unwrapApiData(response.data)
     },
     autosaveAnswer: async (

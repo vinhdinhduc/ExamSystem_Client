@@ -8,6 +8,37 @@ export interface ExamSessionQuestion {
     orderIndex: number
     answerIds: number[]
 }
+export interface SaveProgressRequest {
+    sessionId: string
+    userId?: string
+    questionId: string
+    answerIds: number[]
+    currentQuestionIndex: number
+}
+
+export interface SaveProgressResponse {
+    sessionId: string
+    currentQuestionIndex: number
+    violationCount: number
+    lastSavedAt: string
+    status: number
+    isAutoSubmitted: boolean
+}
+
+export interface ExamViolationRequest {
+    sessionId: string
+    userId?: string
+    type: 'TAB_SWITCH' | 'COPY' | 'PASTE' | 'EXIT_FULLSCREEN' | 'DEVTOOLS'
+    currentQuestionIndex: number
+}
+
+export interface ExamViolationResponse {
+    sessionId: string
+    violationCount: number
+    isForceSubmitted: boolean
+    status: number
+    submittedAt?: string
+}
 
 export interface StartExamResponse {
     sessionId: string
