@@ -22,6 +22,7 @@ import type { RootState } from "../../redux/store";
 import {
   formatDateTime,
   formatDuration,
+  getExamStatusLabel,
   getExamStatusVariant,
   normalizeExamStatus,
 } from "../../utils/examUi";
@@ -50,6 +51,8 @@ const ExamDetailPage = () => {
     (state: RootState) => state.exam,
   );
 
+  console.log("examDetail", examDetail);
+
   useEffect(() => {
     if (id) void dispatch(fetchExamById(id));
   }, [dispatch, id]);
@@ -69,6 +72,7 @@ const ExamDetailPage = () => {
   if (!examDetail) return null;
 
   const status = normalizeExamStatus(examDetail.status);
+  const statusLabel = getExamStatusLabel(examDetail.status);
 
   return (
     <div className="exam-detail-page">
@@ -88,7 +92,10 @@ const ExamDetailPage = () => {
           )}
         </div>
         <div className="page-header__actions">
-          <Badge label={status} variant={getExamStatusVariant(examDetail.status)} />
+          <Badge
+            label={statusLabel}
+            variant={getExamStatusVariant(examDetail.status)}
+          />
           {status === "Published" && (
             <Button
               iconLeft={<IoPlayCircleOutline />}
@@ -123,7 +130,7 @@ const ExamDetailPage = () => {
             <InfoRow
               icon={<IoTrophyOutline />}
               label="Điểm đạt"
-              value={`${examDetail.passingScore} điểm`}
+              value={`${examDetail.passScore} điểm`}
             />
             {examDetail.maxAttempts != null && (
               <InfoRow
@@ -137,9 +144,13 @@ const ExamDetailPage = () => {
               label="Trộn câu hỏi"
               value={
                 examDetail.shuffleQuestions ? (
-                  <span className="exam-detail__yes"><IoCheckmarkCircleOutline /> Có</span>
+                  <span className="exam-detail__yes">
+                    <IoCheckmarkCircleOutline /> Có
+                  </span>
                 ) : (
-                  <span className="exam-detail__no"><IoCloseCircleOutline /> Không</span>
+                  <span className="exam-detail__no">
+                    <IoCloseCircleOutline /> Không
+                  </span>
                 )
               }
             />
@@ -148,9 +159,13 @@ const ExamDetailPage = () => {
               label="Trộn đáp án"
               value={
                 examDetail.shuffleAnswers ? (
-                  <span className="exam-detail__yes"><IoCheckmarkCircleOutline /> Có</span>
+                  <span className="exam-detail__yes">
+                    <IoCheckmarkCircleOutline /> Có
+                  </span>
                 ) : (
-                  <span className="exam-detail__no"><IoCloseCircleOutline /> Không</span>
+                  <span className="exam-detail__no">
+                    <IoCloseCircleOutline /> Không
+                  </span>
                 )
               }
             />
@@ -158,7 +173,11 @@ const ExamDetailPage = () => {
               <InfoRow
                 icon={<IoKeyOutline />}
                 label="Mã truy cập"
-                value={<code className="exam-detail__code">{examDetail.accessCode}</code>}
+                value={
+                  <code className="exam-detail__code">
+                    {examDetail.accessCode}
+                  </code>
+                }
               />
             )}
           </div>
@@ -191,7 +210,9 @@ const ExamDetailPage = () => {
         {examDetail.instructions && (
           <div className="exam-detail__card">
             <h2 className="exam-detail__section-title">Hướng dẫn làm bài</h2>
-            <p className="exam-detail__instructions">{examDetail.instructions}</p>
+            <p className="exam-detail__instructions">
+              {examDetail.instructions}
+            </p>
           </div>
         )}
       </div>

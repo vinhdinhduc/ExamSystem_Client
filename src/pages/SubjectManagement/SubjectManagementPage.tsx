@@ -21,21 +21,20 @@ import type { RootState } from "../../redux/store";
 import type { SubjectPayload } from "../../types/subject";
 
 const defaultValues: SubjectPayload = {
-  subjectCode: "",
-  subjectName: "",
+  code: "",
+  name: "",
   description: "",
   isActive: true,
 };
 
 const SubjectManagementPage = () => {
   const dispatch = useAppDispatch();
-  const { subjects, loading, keyword, page } = useAppSelector(
+  const { subjects, loading, keyword, page, totalPages } = useAppSelector(
     (state: RootState) => state.subject,
   );
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-
   const {
     register,
     handleSubmit,
@@ -61,7 +60,7 @@ const SubjectManagementPage = () => {
         updateSubject({ id: editingId, payload: data }),
       );
       if (updateSubject.fulfilled.match(result)) {
-        toast.success("Subject updated");
+        toast.success("Cập nhật môn học thành công");
         setModalOpen(false);
       }
       return;
@@ -69,7 +68,7 @@ const SubjectManagementPage = () => {
 
     const result = await dispatch(createSubject(data));
     if (createSubject.fulfilled.match(result)) {
-      toast.success("Subject created");
+      toast.success("Tạo môn học thành công");
       setModalOpen(false);
     }
   });
@@ -78,32 +77,33 @@ const SubjectManagementPage = () => {
 
   return (
     <section className="subject-page">
-      <Card title="Subject Management" className="subject-page__header-card">
+      <Card title="Quản lý môn học" className="subject-page__header-card">
         <div className="subject-page__toolbar">
           <input
             value={keyword}
             onChange={(event) => dispatch(setKeyword(event.target.value))}
             className="subject-page__search"
-            placeholder="Search subject"
+            placeholder="Tìm kiếm môn học"
           />
-          <Button onClick={openCreate}>Add Subject</Button>
+          <Button onClick={openCreate}>Thêm môn học</Button>
         </div>
       </Card>
 
       <Card className="subject-page__table-card">
         <Table
           columns={[
-            { key: "subjectCode", title: "Code" },
-            { key: "subjectName", title: "Name" },
-            { key: "description", title: "Description" },
+            { key: "code", title: "Mã môn" },
+            { key: "name", title: "Tên môn" },
+            { key: "description", title: "Mô tả" },
             {
               key: "isActive",
-              title: "Status",
-              render: (row) => (row.isActive ? "Active" : "Inactive"),
+              title: "Trạng thái",
+              render: (row) =>
+                row.isActive ? "Đang hoạt động" : "Ngừng hoạt động",
             },
             {
               key: "actions",
-              title: "Actions",
+              title: "Thao tác",
               render: (row) => (
                 <div className="subject-page__actions">
                   <Button
@@ -111,15 +111,15 @@ const SubjectManagementPage = () => {
                     onClick={() => {
                       setEditingId(row.id);
                       reset({
-                        subjectCode: row.subjectCode,
-                        subjectName: row.subjectName,
+                        code: row.code,
+                        name: row.name,
                         description: row.description ?? "",
                         isActive: row.isActive,
                       });
                       setModalOpen(true);
                     }}
                   >
-                    Edit
+                    Sửa
                   </Button>
                   <Button
                     variant="danger"
@@ -127,7 +127,7 @@ const SubjectManagementPage = () => {
                       void dispatch(deleteSubject(row.id));
                     }}
                   >
-                    Delete
+                    Xóa
                   </Button>
                   <Button
                     variant="secondary"
@@ -137,7 +137,7 @@ const SubjectManagementPage = () => {
                       );
                     }}
                   >
-                    Toggle
+                    Bật/Tắt
                   </Button>
                 </div>
               ),
@@ -149,14 +149,14 @@ const SubjectManagementPage = () => {
 
         <Pagination
           page={page}
-          totalPages={Math.max(1, Math.ceil(rows.length / 10))}
+          totalPages={Math.max(1, totalPages)}
           onChange={(next) => dispatch(setPage(next))}
         />
       </Card>
 
       <Modal
         open={modalOpen}
-        title={editingId ? "Edit Subject" : "Create Subject"}
+        title={editingId ? "Chỉnh sửa môn học" : "Tạo môn học"}
         onClose={() => setModalOpen(false)}
       >
         <form
@@ -164,26 +164,30 @@ const SubjectManagementPage = () => {
           onSubmit={(event) => void onSubmit(event)}
         >
           <FormInput
-            label="Subject Code"
-            registration={register("subjectCode", { required: "Required" })}
-            error={errors.subjectCode}
+            label="Mã môn học"
+            registration={register("code", {
+              required: "Vui lòng nhập mã môn học",
+            })}
+            error={errors.code}
           />
           <FormInput
-            label="Subject Name"
-            registration={register("subjectName", { required: "Required" })}
-            error={errors.subjectName}
+            label="Tên môn học"
+            registration={register("name", {
+              required: "Vui lòng nhập tên môn học",
+            })}
+            error={errors.name}
           />
           <FormInput
-            label="Description"
+            label="Mô tả"
             registration={register("description")}
             error={errors.description}
           />
           <label className="subject-page__checkbox">
             <input type="checkbox" {...register("isActive")} />
-            Active
+            Đang hoạt động
           </label>
           <Button type="submit" disabled={loading}>
-            {editingId ? "Save Changes" : "Create Subject"}
+            {editingId ? "Lưu thay đổi" : "Tạo môn học"}
           </Button>
         </form>
       </Modal>

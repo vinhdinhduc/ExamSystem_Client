@@ -8,6 +8,7 @@ import {
   IoPeopleOutline,
   IoChevronDownOutline,
   IoChevronUpOutline,
+  IoCreateOutline,
 } from "react-icons/io5";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
@@ -17,6 +18,8 @@ import { useAppDispatch, useAppSelector } from "../../hooks/reduxHooks";
 import {
   createGroup,
   fetchGroups,
+  updateGroup,
+  deleteGroup,
   addGroupMember,
   removeGroupMember,
 } from "../../redux/slices/groupSlice";
@@ -24,15 +27,35 @@ import type { RootState } from "../../redux/store";
 import type { GroupPayload, Group } from "../../types/group";
 import userService from "../../api/services/userService";
 import type { UserListDto } from "../../api/services/userService";
+import { canPerformFeature } from "../../utils/roleHelper";
+
+interface GroupEditPayload {
+  code: string;
+  name: string;
+  description: string;
+}
 
 const GroupManagementPage = () => {
   const dispatch = useAppDispatch();
   const { groups, loading } = useAppSelector((state: RootState) => state.group);
+  const { user } = useAppSelector((state: RootState) => state.auth);
 
   const { register, handleSubmit, reset } = useForm<GroupPayload>();
+  const {
+    register: editRegister,
+    handleSubmit: handleEditSubmit,
+    reset: resetEdit,
+  } = useForm<GroupEditPayload>();
+
+  // Role-based access
+  const canManageGroups = canPerformFeature(
+    user?.roles ?? [],
+    "canManageGroups",
+  );
 
   const [expandedGroup, setExpandedGroup] = useState<number | null>(null);
   const [addMemberModal, setAddMemberModal] = useState<Group | null>(null);
+  const [editingGroup, setEditingGroup] = useState<Group | null>(null);
   const [users, setUsers] = useState<UserListDto[]>([]);
   const [userSearch, setUserSearch] = useState("");
   const [addingUserId, setAddingUserId] = useState<string | null>(null);
@@ -42,14 +65,56 @@ const GroupManagementPage = () => {
   }, [dispatch]);
 
   const onSubmit = handleSubmit(async (payload) => {
-    const result = await dispatch(createGroup(payload));
+    const result = await dispatch(
+      createGroup({
+        ...payload,
+        createdByUserId: user?.id ?? "",
+      }),
+    );
     if (createGroup.fulfilled.match(result)) {
       toast.success("Tạo nhóm thành công");
-      reset({ groupCode: "", groupName: "", description: "" });
+      reset({ code: "", name: "", description: "" });
     } else {
-      toast.error("Không thể tạo nhóm");
+      toast.error(result.payload ?? "Không thể tạo nhóm");
     }
   });
+
+  const openEditModal = (group: Group) => {
+    setEditingGroup(group);
+    resetEdit({
+      code: group.code,
+      name: group.name,
+      description: group.description ?? "",
+    });
+  };
+
+  const onEditSubmit = handleEditSubmit(async (payload) => {
+    if (!editingGroup) return;
+    const result = await dispatch(
+      updateGroup({ id: editingGroup.id, payload }),
+    );
+    if (updateGroup.fulfilled.match(result)) {
+      toast.success("Cập nhật nhóm thành công");
+      setEditingGroup(null);
+    } else {
+      toast.error(result.payload ?? "Không thể cập nhật nhóm");
+    }
+  });
+
+  const handleDeleteGroup = async (group: Group) => {
+    if (
+      !window.confirm(
+        `Xóa nhóm "${group.name}"? Hành động này không thể hoàn tác.`,
+      )
+    )
+      return;
+    const result = await dispatch(deleteGroup(group.id));
+    if (deleteGroup.fulfilled.match(result)) {
+      toast.success("Đã xóa nhóm");
+    } else {
+      toast.error(result.payload ?? "Không thể xóa nhóm");
+    }
+  };
 
   const openAddMemberModal = async (group: Group) => {
     setAddMemberModal(group);
@@ -71,29 +136,56 @@ const GroupManagementPage = () => {
     if (addGroupMember.fulfilled.match(result)) {
       toast.success("Đã thêm thành viên");
     } else {
-      toast.error("Không thể thêm thành viên");
+      toast.error(result.payload ?? "Không thể thêm thành viên");
     }
     setAddingUserId(null);
   };
 
-  const handleRemoveMember = async (groupId: number, userId: string, name: string) => {
+  const handleRemoveMember = async (
+    groupId: number,
+    userId: string,
+    name: string,
+  ) => {
     if (!window.confirm(`Xóa "${name}" khỏi nhóm?`)) return;
     const result = await dispatch(removeGroupMember({ groupId, userId }));
     if (removeGroupMember.fulfilled.match(result)) {
       toast.success("Đã xóa thành viên");
     } else {
-      toast.error("Không thể xóa thành viên");
+      toast.error(result.payload ?? "Không thể xóa thành viên");
     }
   };
 
   const filteredUsers = users.filter(
     (u) =>
-      !addMemberModal?.members.some((m) => m.id === u.id) &&
+      !addMemberModal?.members.some((m) => m.userId === u.id) &&
       (u.fullName.toLowerCase().includes(userSearch.toLowerCase()) ||
         u.email.toLowerCase().includes(userSearch.toLowerCase())),
   );
+  console.log("Check group", groups);
 
   if (loading) return <LoadingSpinner />;
+
+  // Show access denied for students
+  if (!canManageGroups) {
+    return (
+      <div className="group-page">
+        <div className="page-header">
+          <div className="page-header__text">
+            <h1 className="page-header__title">Quản lý nhóm / lớp</h1>
+          </div>
+        </div>
+        <Card>
+          <div className="group-page__empty">
+            <IoPeopleOutline />
+            <p>
+              Bạn không có quyền truy cập trang này. Chỉ giáo viên và quản trị
+              viên có thể quản lý nhóm.
+            </p>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="group-page">
@@ -109,17 +201,14 @@ const GroupManagementPage = () => {
 
       {/* Form tạo nhóm */}
       <Card title="Tạo nhóm mới">
-        <form
-          className="group-page__form"
-          onSubmit={(e) => void onSubmit(e)}
-        >
+        <form className="group-page__form" onSubmit={(e) => void onSubmit(e)}>
           <input
-            {...register("groupCode", { required: true })}
+            {...register("code", { required: true })}
             className="form-input"
             placeholder="Mã nhóm (VD: LOP10A1)"
           />
           <input
-            {...register("groupName", { required: true })}
+            {...register("name", { required: true })}
             className="form-input"
             placeholder="Tên nhóm / lớp"
           />
@@ -135,7 +224,7 @@ const GroupManagementPage = () => {
       </Card>
 
       {/* Danh sách nhóm */}
-      {groups.length === 0 ? (
+      {!Array.isArray(groups) || groups.length === 0 ? (
         <Card>
           <div className="group-page__empty">
             <IoPeopleOutline />
@@ -150,20 +239,16 @@ const GroupManagementPage = () => {
               <div
                 className="group-page__item-header"
                 onClick={() =>
-                  setExpandedGroup(
-                    expandedGroup === group.id ? null : group.id,
-                  )
+                  setExpandedGroup(expandedGroup === group.id ? null : group.id)
                 }
               >
                 <div className="group-page__item-info">
                   <div className="group-page__item-avatar">
-                    {group.groupName.charAt(0)}
+                    {group.name.charAt(0)}
                   </div>
                   <div>
-                    <strong>{group.groupName}</strong>
-                    <span className="group-page__item-code">
-                      {group.groupCode}
-                    </span>
+                    <strong>{group.name}</strong>
+                    <span className="group-page__item-code">{group.code}</span>
                     {group.description && (
                       <p className="group-page__item-desc">
                         {group.description}
@@ -173,8 +258,30 @@ const GroupManagementPage = () => {
                 </div>
                 <div className="group-page__item-meta">
                   <span className="group-page__member-count">
-                    <IoPeopleOutline /> {group.members.length} thành viên
+                    <IoPeopleOutline /> {group.members?.length ?? 0} thành viên
                   </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    iconLeft={<IoCreateOutline />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openEditModal(group);
+                    }}
+                  >
+                    Sửa
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    iconLeft={<IoTrashOutline />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void handleDeleteGroup(group);
+                    }}
+                  >
+                    Xóa
+                  </Button>
                   <Button
                     size="sm"
                     variant="outline"
@@ -197,22 +304,25 @@ const GroupManagementPage = () => {
               {/* Member list */}
               {expandedGroup === group.id && (
                 <div className="group-page__member-list">
-                  {group.members.length === 0 ? (
+                  {(group.members?.length ?? 0) === 0 ? (
                     <p className="group-page__no-member">
                       Chưa có thành viên nào
                     </p>
                   ) : (
                     group.members.map((member) => (
-                      <div key={member.id} className="group-page__member-item">
+                      <div
+                        key={`${member.groupId}-${member.userId}`}
+                        className="group-page__member-item"
+                      >
                         <div className="group-page__avatar">
-                          {member.fullName.charAt(0)}
+                          {member.fullName.charAt(0).toUpperCase()}
                         </div>
                         <div className="group-page__member-info">
                           <span className="group-page__member-name">
-                            {member.fullName}
+                            {member.fullName}-{member.email}
                           </span>
                           <span className="group-page__member-email">
-                            {member.email}
+                            {new Date(member.joinedAt).toLocaleString("vi-VN")}
                           </span>
                         </div>
                         <Button
@@ -222,8 +332,8 @@ const GroupManagementPage = () => {
                           onClick={() =>
                             void handleRemoveMember(
                               group.id,
-                              member.id,
-                              member.fullName,
+                              member.userId,
+                              member.userId,
                             )
                           }
                         >
@@ -243,7 +353,7 @@ const GroupManagementPage = () => {
       {addMemberModal && (
         <Modal
           open={true}
-          title={`Thêm thành viên vào "${addMemberModal.groupName}"`}
+          title={`Thêm thành viên vào "${addMemberModal.name}"`}
           size="md"
           onClose={() => setAddMemberModal(null)}
         >
@@ -289,6 +399,56 @@ const GroupManagementPage = () => {
               )}
             </div>
           </div>
+        </Modal>
+      )}
+
+      {/* Modal chỉnh sửa nhóm */}
+      {editingGroup && (
+        <Modal
+          open={true}
+          title={`Chỉnh sửa nhóm "${editingGroup.name}"`}
+          size="md"
+          onClose={() => setEditingGroup(null)}
+        >
+          <form
+            className="group-page__form group-page__edit-form"
+            onSubmit={(e) => void onEditSubmit(e)}
+          >
+            <label className="ui-form-field">
+              <span className="ui-form-field__label">Mã nhóm</span>
+              <input
+                {...editRegister("code", { required: true })}
+                className="ui-form-field__control"
+                placeholder="Mã nhóm"
+              />
+            </label>
+            <label className="ui-form-field">
+              <span className="ui-form-field__label">Tên nhóm</span>
+              <input
+                {...editRegister("name", { required: true })}
+                className="ui-form-field__control"
+                placeholder="Tên nhóm / lớp"
+              />
+            </label>
+            <label className="ui-form-field">
+              <span className="ui-form-field__label">Mô tả</span>
+              <input
+                {...editRegister("description")}
+                className="ui-form-field__control"
+                placeholder="Mô tả (không bắt buộc)"
+              />
+            </label>
+            <div className="group-page__edit-actions">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditingGroup(null)}
+              >
+                Hủy
+              </Button>
+              <Button type="submit">Cập nhật</Button>
+            </div>
+          </form>
         </Modal>
       )}
     </div>

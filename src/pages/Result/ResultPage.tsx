@@ -1,63 +1,126 @@
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   IoCheckmarkCircle,
   IoCloseCircle,
   IoHomeOutline,
+  IoInformationCircleOutline,
   IoListOutline,
 } from "react-icons/io5";
 import { Link } from "react-router-dom";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
-import { useAppDispatch, useAppSelector } from "../../hooks/reduxHooks";
-import { fetchResultById } from "../../redux/slices/resultSlice";
-import type { RootState } from "../../redux/store";
+import { examSessionService } from "../../api/services/examSessionService";
+import type { ExamSessionReviewResult } from "../../types/examSession";
+import type { ResultSummaryView } from "../../types/result";
 
 const ResultPage = () => {
   const { id } = useParams();
-  const dispatch = useAppDispatch();
-  const { currentResult, loading, error } = useAppSelector(
-    (state: RootState) => state.result,
-  );
+  const location = useLocation();
+  const [review, setReview] = useState<ExamSessionReviewResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const summary = (location.state as { summary?: ResultSummaryView } | null)
+    ?.summary;
 
   useEffect(() => {
-    if (!id) return;
-    void dispatch(fetchResultById(id));
-  }, [dispatch, id]);
+    if (!id) {
+      setError("Không tìm thấy phiên thi để xem kết quả.");
+      return;
+    }
 
-  if (loading) return <LoadingSpinner />;
-  if (error) return <p className="error-text">{error}</p>;
+    let mounted = true;
 
-  if (!currentResult) {
+    const fetchReview = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await examSessionService.getSessionReview(id);
+        console.log("Check revview", result);
+
+        if (!mounted) return;
+        setReview(result);
+      } catch (fetchError) {
+        if (!mounted) return;
+        setError(
+          fetchError instanceof Error
+            ? fetchError.message
+            : "Không thể tải chi tiết kết quả bài thi",
+        );
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void fetchReview();
+
+    return () => {
+      mounted = false;
+    };
+  }, [id]);
+
+  const displaySummary = useMemo<ResultSummaryView | null>(() => {
+    if (review) {
+      return {
+        sessionId: review.sessionId,
+        score: review.score,
+        isPassed: review.isPassed,
+        totalCorrect: review.totalCorrect,
+        submittedAt: review.submittedAt,
+        status: review.isPassed ? 1 : 0,
+        totalQuestions: review.questions.length,
+        examTitle: review.examTitle,
+      };
+    }
+
+    return summary ?? null;
+  }, [review, summary]);
+
+  if (!displaySummary && loading) return <LoadingSpinner />;
+
+  if (!displaySummary) {
     return (
       <div className="result-page">
-        <p>Không tìm thấy kết quả.</p>
-        <Link to="/dashboard">
-          <Button variant="outline" iconLeft={<IoHomeOutline />}>
-            Về Dashboard
-          </Button>
-        </Link>
+        <p className="error-text">{error ?? "Không tìm thấy kết quả."}</p>
+
+        <div className="result-page__actions">
+          <Link to="/dashboard">
+            <Button variant="outline" iconLeft={<IoHomeOutline />}>
+              Bảng điều khiển
+            </Button>
+          </Link>
+          <Link to="/exams">
+            <Button variant="outline" iconLeft={<IoListOutline />}>
+              Danh sách đề
+            </Button>
+          </Link>
+        </div>
       </div>
     );
   }
 
-  const isPassed = currentResult.score >= 50;
+  const canShowCorrectAnswer = review
+    ? review.questions.some((question) =>
+        question.options.some((option) => option.isCorrect !== null),
+      )
+    : false;
 
   return (
     <div className="result-page">
-      {/* Score summary */}
       <div className="result-score">
         <div
-          className={`result-score__circle ${isPassed ? "result-score__circle--pass" : "result-score__circle--fail"}`}
+          className={`result-score__circle ${displaySummary.isPassed ? "result-score__circle--pass" : "result-score__circle--fail"}`}
         >
-          {currentResult.score}%
+          {displaySummary.score}%
         </div>
         <h1 className="result-score__title">
-          {currentResult.examTitle ?? "Kết quả bài thi"}
+          {displaySummary.examTitle ?? "Kết quả bài thi"}
         </h1>
         <p className="result-score__subtitle">
-          {isPassed
+          {displaySummary.isPassed
             ? "Chúc mừng! Bạn đã đạt."
             : "Bạn chưa đạt yêu cầu. Hãy cố gắng hơn!"}
         </p>
@@ -65,32 +128,38 @@ const ResultPage = () => {
         <div className="result-score__stats">
           <div className="result-score__stat-item">
             <span className="result-score__stat-value result-score__stat-value--correct">
-              {currentResult.correctAnswers}
+              {displaySummary.totalCorrect}
             </span>
             <span className="result-score__stat-label">Câu đúng</span>
           </div>
           <div className="result-score__stat-item">
             <span className="result-score__stat-value result-score__stat-value--wrong">
-              {currentResult.wrongAnswers}
+              {Math.max(
+                0,
+                displaySummary.totalQuestions - displaySummary.totalCorrect,
+              )}
             </span>
             <span className="result-score__stat-label">Câu sai</span>
           </div>
           <div className="result-score__stat-item">
             <span className="result-score__stat-value result-score__stat-value--total">
-              {currentResult.totalQuestions}
+              {displaySummary.totalQuestions}
             </span>
             <span className="result-score__stat-label">Tổng câu</span>
           </div>
         </div>
       </div>
 
-      {/* Action bar */}
-      <div
-        style={{ display: "flex", gap: "0.75rem", justifyContent: "center" }}
-      >
+      {error && (
+        <Card>
+          <p className="error-text">{error}</p>
+        </Card>
+      )}
+
+      <div className="result-page__actions">
         <Link to="/dashboard">
           <Button variant="outline" iconLeft={<IoHomeOutline />}>
-            Dashboard
+            Bảng điều khiển
           </Button>
         </Link>
         <Link to="/exams">
@@ -100,54 +169,108 @@ const ResultPage = () => {
         </Link>
       </div>
 
-      {/* Question review */}
-      {currentResult.showCorrectAnswer && currentResult.reviews.length > 0 && (
+      {review && review.questions.length > 0 && (
         <Card title="Chi tiết đáp án">
+          {!canShowCorrectAnswer && (
+            <p className="review-note">
+              <IoInformationCircleOutline />
+              Đáp án đúng đang được ẩn theo cấu hình của đề thi.
+            </p>
+          )}
           <div className="review-list">
-            {currentResult.reviews.map((review, index) => (
-              <div key={review.questionId} className="review-card">
-                <p className="review-card__question">
-                  {index + 1}. {review.questionContent}
-                </p>
+            {review.questions
+              .slice()
+              .sort((a, b) => a.orderIndex - b.orderIndex)
+              .map((question, index) => (
+                <div key={question.questionId} className="review-card">
+                  <div className="review-card__header">
+                    <p className="review-card__question">
+                      {index + 1}. {question.content}
+                    </p>
+                    <div
+                      className={`review-card__verdict ${question.isCorrect ? "review-card__verdict--correct" : "review-card__verdict--wrong"}`}
+                    >
+                      {question.isCorrect ? (
+                        <>
+                          <IoCheckmarkCircle /> Đúng
+                        </>
+                      ) : (
+                        <>
+                          <IoCloseCircle /> Sai
+                        </>
+                      )}
+                    </div>
+                  </div>
 
-                <div className="review-card__answer-row">
-                  <span className="review-card__label">Bạn chọn:</span>
-                  <span className="review-card__value">
-                    {review.selectedOptionIds.length
-                      ? review.selectedOptionIds.join(", ")
-                      : "Chưa trả lời"}
-                  </span>
-                </div>
+                  <div className="review-card__options">
+                    {question.options
+                      .slice()
+                      .sort((a, b) => a.orderIndex - b.orderIndex)
+                      .map((option) => {
+                        const classes = ["review-option"];
 
-                <div className="review-card__answer-row">
-                  <span className="review-card__label">Đáp án đúng:</span>
-                  <span className="review-card__value">
-                    {review.correctOptionIds.join(", ")}
-                  </span>
-                </div>
+                        if (option.isSelected) {
+                          classes.push("review-option--selected");
+                        }
 
-                <div
-                  className={`review-card__verdict ${review.isCorrect ? "review-card__verdict--correct" : "review-card__verdict--wrong"}`}
-                >
-                  {review.isCorrect ? (
-                    <>
-                      <IoCheckmarkCircle /> Đúng
-                    </>
-                  ) : (
-                    <>
-                      <IoCloseCircle /> Sai
-                    </>
+                        if (option.isCorrect === true) {
+                          classes.push("review-option--correct");
+                        }
+
+                        if (option.isSelected && option.isCorrect === false) {
+                          classes.push("review-option--wrong-selected");
+                        }
+
+                        return (
+                          <div key={option.id} className={classes.join(" ")}>
+                            <span className="review-option__label">
+                              {option.content}
+                            </span>
+                            <span className="review-option__meta">
+                              {option.isSelected ? "Bạn chọn" : ""}
+                              {option.isSelected && option.isCorrect === true
+                                ? " • "
+                                : ""}
+                              {option.isCorrect === true ? "Đáp án đúng" : ""}
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
+
+                  {!canShowCorrectAnswer && (
+                    <div className="review-card__answer-row">
+                      <span className="review-card__label">Bạn chọn:</span>
+                      <span className="review-card__value">
+                        {question.selectedAnswerIds.length
+                          ? question.selectedAnswerIds.join(", ")
+                          : "Chưa trả lời"}
+                      </span>
+                    </div>
+                  )}
+
+                  {question.explanation && (
+                    <div className="review-card__explanation">
+                      {question.explanation}
+                    </div>
                   )}
                 </div>
-
-                {review.explanation && (
-                  <div className="review-card__explanation">
-                    💡 {review.explanation}
-                  </div>
-                )}
-              </div>
-            ))}
+              ))}
           </div>
+        </Card>
+      )}
+
+      {review && review.questions.length === 0 && (
+        <Card>
+          <p className="review-note">
+            Bài làm không có dữ liệu câu hỏi để xem lại.
+          </p>
+        </Card>
+      )}
+
+      {loading && displaySummary && (
+        <Card>
+          <p className="review-note">Đang tải chi tiết bài làm...</p>
         </Card>
       )}
     </div>

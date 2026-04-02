@@ -74,8 +74,8 @@
         color: #d97706;
     }
     &__icon--purple {
-        background: rgba(#7c3aed, 0.12);
-        color: #7c3aed;
+        background: rgba($color-accent, 0.14);
+        color: $color-accent;
     }
 
     &__body {

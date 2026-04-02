@@ -23,8 +23,11 @@ const EyeIcon = ({ open }: { open: boolean }) =>
 const RegisterPage = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { isAuthenticated, loading } = useAppSelector((state: RootState) => state.auth);
+  const { isAuthenticated, loading } = useAppSelector(
+    (state: RootState) => state.auth,
+  );
 
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -41,9 +44,14 @@ const RegisterPage = () => {
       return;
     }
 
-    const result = await dispatch(register({ email, password }));
+    const result = await dispatch(
+      register({ email, password, username: username || undefined }),
+    );
     if (register.fulfilled.match(result)) {
-      toast.success("Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.", { autoClose: 7000 });
+      toast.success(
+        "Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.",
+        { autoClose: 7000 },
+      );
       navigate("/login", { replace: true });
       return;
     }
@@ -56,6 +64,15 @@ const RegisterPage = () => {
       <form className="login-card" onSubmit={handleSubmit}>
         <h2>Tạo tài khoản</h2>
         <p>Đăng ký để truy cập hệ thống thi trắc nghiệm</p>
+
+        <label htmlFor="username">Tên đăng nhập</label>
+        <input
+          id="username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="Nhập tên đăng nhập (không bắt buộc)"
+          autoComplete="username"
+        />
 
         <label htmlFor="email">Email</label>
         <input
@@ -79,7 +96,12 @@ const RegisterPage = () => {
             autoComplete="new-password"
             required
           />
-          <button type="button" className="eye-btn" onClick={() => setShowPassword((v) => !v)} tabIndex={-1}>
+          <button
+            type="button"
+            className="eye-btn"
+            onClick={() => setShowPassword((v) => !v)}
+            tabIndex={-1}
+          >
             <EyeIcon open={showPassword} />
           </button>
         </div>
@@ -95,7 +117,12 @@ const RegisterPage = () => {
             autoComplete="new-password"
             required
           />
-          <button type="button" className="eye-btn" onClick={() => setShowConfirm((v) => !v)} tabIndex={-1}>
+          <button
+            type="button"
+            className="eye-btn"
+            onClick={() => setShowConfirm((v) => !v)}
+            tabIndex={-1}
+          >
             <EyeIcon open={showConfirm} />
           </button>
         </div>
@@ -106,7 +133,9 @@ const RegisterPage = () => {
 
         <div className="auth-divider">hoặc</div>
 
-        <Link to="/login" className="muted-link">Đã có tài khoản? Đăng nhập ngay</Link>
+        <Link to="/login" className="muted-link">
+          Đã có tài khoản? Đăng nhập ngay
+        </Link>
       </form>
     </div>
   );

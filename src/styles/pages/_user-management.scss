@@ -1,3 +1,4 @@
+@use "sass:color";
 @use "../variables" as *;
 @use "../mixins" as *;
 
@@ -72,7 +73,7 @@
 
     &:hover {
       color: $color-text;
-      border-color: darken($color-border, 10%);
+      border-color: color.adjust($color-border, $lightness: -10%);
     }
 
     &--active {
@@ -178,22 +179,34 @@
 
     &--edit {
       color: $color-primary;
-      &:hover { background: rgba($color-primary, 0.08); border-color: $color-primary; }
+      &:hover {
+        background: rgba($color-primary, 0.08);
+        border-color: $color-primary;
+      }
     }
 
     &--lock {
       color: $color-danger;
-      &:hover { background: rgba($color-danger, 0.08); border-color: $color-danger; }
+      &:hover {
+        background: rgba($color-danger, 0.08);
+        border-color: $color-danger;
+      }
     }
 
     &--unlock {
       color: $color-secondary;
-      &:hover { background: rgba($color-secondary, 0.08); border-color: $color-secondary; }
+      &:hover {
+        background: rgba($color-secondary, 0.08);
+        border-color: $color-secondary;
+      }
     }
 
     &--delete {
       color: $color-danger;
-      &:hover { background: rgba($color-danger, 0.1); border-color: $color-danger; }
+      &:hover {
+        background: rgba($color-danger, 0.1);
+        border-color: $color-danger;
+      }
     }
   }
 
@@ -248,7 +261,9 @@
       box-shadow: 0 0 0 3px rgba($color-primary, 0.1);
     }
 
-    &::placeholder { color: $color-muted; }
+    &::placeholder {
+      color: $color-muted;
+    }
   }
 
   &__roles-section {
@@ -277,7 +292,9 @@
     cursor: pointer;
     transition: background 0.15s;
 
-    &:hover { background: rgba($color-primary, 0.06); }
+    &:hover {
+      background: rgba($color-primary, 0.06);
+    }
 
     input[type="checkbox"] {
       width: 15px;
@@ -327,8 +344,12 @@
     align-items: center;
     gap: 1rem;
 
-    &--active .user-mgmt__stat-value { color: $color-secondary; }
-    &--locked .user-mgmt__stat-value { color: $color-danger; }
+    &--active .user-mgmt__stat-value {
+      color: $color-secondary;
+    }
+    &--locked .user-mgmt__stat-value {
+      color: $color-danger;
+    }
   }
 
   &__stat-icon {
@@ -353,7 +374,11 @@
   // ── View icon button ──────────────────────────────
   &__icon-btn--view {
     color: $color-muted;
-    &:hover { background: rgba($color-text, 0.06); border-color: $color-text; color: $color-text; }
+    &:hover {
+      background: rgba($color-text, 0.06);
+      border-color: $color-text;
+      color: $color-text;
+    }
   }
 
   // ── Input readonly ────────────────────────────────
@@ -396,7 +421,9 @@
     display: flex;
     align-items: center;
 
-    &:hover { color: $color-text; }
+    &:hover {
+      color: $color-text;
+    }
   }
 
   // ── Create note banner ────────────────────────────
@@ -464,7 +491,9 @@
     grid-template-columns: 1fr 1fr;
     gap: 0.75rem;
 
-    @media (max-width: 480px) { grid-template-columns: 1fr; }
+    @media (max-width: 480px) {
+      grid-template-columns: 1fr;
+    }
   }
 
   &__detail-item {
@@ -475,7 +504,9 @@
     background: $color-bg;
     border-radius: $radius-md;
 
-    &--full { grid-column: 1 / -1; }
+    &--full {
+      grid-column: 1 / -1;
+    }
   }
 
   &__detail-label {

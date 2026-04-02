@@ -1,7 +1,9 @@
+import type { PaginatedResult } from './api'
+
 export interface Subject {
     id: number
-    subjectCode: string
-    subjectName: string
+    code: string
+    name: string
     description: string | null
     isActive: boolean
     questionCount?: number
@@ -9,9 +11,11 @@ export interface Subject {
     createdAt?: string
 }
 
+export type SubjectListResult = PaginatedResult<Subject>
+
 export interface SubjectPayload {
-    subjectCode: string
-    subjectName: string
+    code: string
+    name: string
     description: string
     isActive: boolean
 }
@@ -25,4 +29,6 @@ export interface SubjectState {
     keyword: string
     page: number
     pageSize: number
+    total: number
+    totalPages: number
 }

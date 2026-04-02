@@ -17,7 +17,7 @@ export const submitExam = createAsyncThunk<
     try {
         return await resultService.submitExamAttempt(payload)
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unable to submit exam'
+        const message = error instanceof Error ? error.message : 'Không thể nộp bài thi'
         return thunkApi.rejectWithValue(message)
     }
 })
@@ -28,7 +28,7 @@ export const fetchResultById = createAsyncThunk<Result, string, { rejectValue: s
         try {
             return await resultService.getResultById(id)
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Unable to fetch result'
+            const message = error instanceof Error ? error.message : 'Không thể tải kết quả bài thi'
             return thunkApi.rejectWithValue(message)
         }
     },
@@ -56,7 +56,7 @@ const resultSlice = createSlice({
             })
             .addCase(submitExam.rejected, (state, action) => {
                 state.loading = false
-                state.error = action.payload ?? 'Unable to submit exam'
+                state.error = action.payload ?? 'Không thể nộp bài thi'
             })
             .addCase(fetchResultById.pending, (state) => {
                 state.loading = true
@@ -69,7 +69,7 @@ const resultSlice = createSlice({
             })
             .addCase(fetchResultById.rejected, (state, action) => {
                 state.loading = false
-                state.error = action.payload ?? 'Unable to fetch result'
+                state.error = action.payload ?? 'Không thể tải kết quả bài thi'
             })
     },
 })

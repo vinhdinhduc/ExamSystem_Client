@@ -8,11 +8,12 @@ import {
 
 interface QuestionCardProps {
   question: Question;
+  index: number;
   value: number[];
   onChange: (ids: number[]) => void;
 }
 
-const QuestionCard = ({ question, value, onChange }: QuestionCardProps) => {
+const QuestionCard = ({ question, index, value, onChange }: QuestionCardProps) => {
   const options = getQuestionOptions(question);
   const isMultiple = question.questionType === 1;
 
@@ -28,7 +29,9 @@ const QuestionCard = ({ question, value, onChange }: QuestionCardProps) => {
           variant="warning"
         />
       </div>
-      <h3 className="question-card__title">{question.content}</h3>
+      <h3 className="question-card__title">
+        <span className="question-card__index">Câu {index}:</span> {question.content}
+      </h3>
       <div className="question-card__answers">
         {options.map((option) => {
           const checked = value.includes(option.id);

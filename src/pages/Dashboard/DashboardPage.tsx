@@ -19,9 +19,10 @@ import {
   formatDateTime,
   formatDuration,
   getAssignmentBucket,
+  getExamStatusLabel,
   getExamStatusVariant,
-  normalizeExamStatus,
 } from "../../utils/examUi";
+import { HiAnnotation } from "react-icons/hi";
 
 const DashboardPage = () => {
   const dispatch = useAppDispatch();
@@ -55,7 +56,8 @@ const DashboardPage = () => {
       <div className="page-header">
         <div className="page-header__text">
           <h1 className="page-header__title">
-            Xin chào, {user?.fullName ?? user?.username ?? "Học viên"} 👋
+            Xin chào, {user?.fullName ?? user?.username ?? "Học viên"}{" "}
+            <HiAnnotation />
           </h1>
           <p className="page-header__subtitle">
             Đây là bảng điều khiển theo dõi các kỳ thi được giao.
@@ -111,19 +113,15 @@ const DashboardPage = () => {
           </h2>
           <div className="dashboard-exam-grid">
             {upcoming.map((exam) => (
-              <div key={exam.id} className="exam-card">
-                <p className="exam-card__subject">
-                  {exam.subjectCode ?? exam.subjectName}
-                </p>
+              <div key={exam.examId} className="exam-card">
+                <p className="exam-card__subject">Đề thi được giao</p>
                 <h3 className="exam-card__title">{exam.title}</h3>
                 <p className="exam-card__meta">
                   <IoTimeOutline /> {formatDuration(exam.duration)}
-                  {" · "}
-                  {exam.totalQuestions} câu
                 </p>
                 <div className="exam-card__footer">
                   <Badge
-                    label={normalizeExamStatus(exam.status)}
+                    label={getExamStatusLabel(exam.status)}
                     variant={getExamStatusVariant(exam.status)}
                   />
                   <span className="exam-card__time">
@@ -144,19 +142,15 @@ const DashboardPage = () => {
           </h2>
           <div className="dashboard-exam-grid">
             {doing.map((exam) => (
-              <div key={exam.id} className="exam-card">
-                <p className="exam-card__subject">
-                  {exam.subjectCode ?? exam.subjectName}
-                </p>
+              <div key={exam.examId} className="exam-card">
+                <p className="exam-card__subject">Đề thi được giao</p>
                 <h3 className="exam-card__title">{exam.title}</h3>
                 <p className="exam-card__meta">
                   <IoTimeOutline /> {formatDuration(exam.duration)}
-                  {" · "}
-                  {exam.totalQuestions} câu
                 </p>
                 <div className="exam-card__footer">
                   <Badge label="Đang mở" variant="success" />
-                  <Link to={`/do-exam/${exam.id}`}>
+                  <Link to={`/do-exam/${exam.examId}`}>
                     <Button size="sm">Vào thi</Button>
                   </Link>
                 </div>
@@ -174,20 +168,18 @@ const DashboardPage = () => {
           </h2>
           <div className="dashboard-exam-grid">
             {completed.map((exam) => (
-              <div key={exam.id} className="exam-card">
-                <p className="exam-card__subject">
-                  {exam.subjectCode ?? exam.subjectName}
-                </p>
+              <div key={exam.examId} className="exam-card">
+                <p className="exam-card__subject">Đề thi được giao</p>
                 <h3 className="exam-card__title">{exam.title}</h3>
                 <p className="exam-card__meta">
-                  {exam.totalQuestions} câu · {formatDuration(exam.duration)}
+                  {formatDuration(exam.duration)}
                 </p>
                 <div className="exam-card__footer">
                   <Badge
-                    label={normalizeExamStatus(exam.status)}
+                    label={getExamStatusLabel(exam.status)}
                     variant={getExamStatusVariant(exam.status)}
                   />
-                  <Link to={`/exams/${exam.id}`}>
+                  <Link to={`/exam/${exam.examId}`}>
                     <Button size="sm" variant="outline">
                       Chi tiết
                     </Button>

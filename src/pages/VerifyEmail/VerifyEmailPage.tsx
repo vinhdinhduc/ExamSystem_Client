@@ -53,7 +53,9 @@ const VerifyEmailPage = () => {
         <h2>Xác thực Email</h2>
 
         {status === "loading" && (
-          <p style={{ textAlign: "center" }}>Đang xác thực, vui lòng chờ...</p>
+          <p className="auth-status auth-status--loading">
+            Đang xác thực, vui lòng chờ...
+          </p>
         )}
 
         {status === "success" && (
@@ -70,8 +72,8 @@ const VerifyEmailPage = () => {
         )}
 
         {status === "error" && (
-          <div style={{ textAlign: "center" }}>
-            <p style={{ color: "#dc2626" }}>✗ {message}</p>
+          <div className="auth-status-wrap">
+            <p className="auth-status auth-status--error">✗ {message}</p>
           </div>
         )}
 

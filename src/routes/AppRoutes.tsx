@@ -18,12 +18,14 @@ import VerifyEmailPage from "../pages/VerifyEmail/VerifyEmailPage";
 import ForgotPasswordPage from "../pages/ForgotPassword/ForgotPasswordPage";
 import ResetPasswordPage from "../pages/ResetPassword/ResetPasswordPage";
 import ResultPage from "../pages/Result/ResultPage";
+import ResultsOverviewPage from "../pages/Result/ResultsOverviewPage";
 import { logout } from "../redux/slices/authSlice";
 import { AUTH_LOGOUT_EVENT } from "../utils/authEvents";
 import SubjectManagementPage from "../pages/SubjectManagement/SubjectManagementPage";
 import ExamBuilderPage from "../pages/ExamBuilder/ExamBuilderPage";
 import ExamPreviewPage from "../pages/ExamBuilder/ExamPreviewPage";
 import GroupManagementPage from "../pages/GroupManagement/GroupManagementPage";
+import QuestionManagementPage from "../pages/QuestionManagement/QuestionManagementPage";
 import RolesPermissionsPage from "../pages/Admin/RolesPermissionsPage";
 import UserManagementPage from "../pages/UserManagement/UserManagementPage";
 import ProfilePage from "../pages/Profile/ProfilePage";
@@ -64,13 +66,20 @@ const AppRoutes = () => {
           <Route path="/exams" element={<ExamListPage />} />
           <Route path="/exam/:id" element={<ExamDetailPage />} />
           <Route path="/do-exam/:id" element={<DoExamRouteElement />} />
+          <Route path="/results" element={<ResultsOverviewPage />} />
           <Route path="/result/:id" element={<ResultPage />} />
-          <Route path="/subjects" element={<SubjectManagementPage />} />
-          <Route path="/exams/new" element={<ExamBuilderPage />} />
-          <Route path="/exams/:id/edit" element={<ExamBuilderPage />} />
-          <Route path="/exams/:id/preview" element={<ExamPreviewPage />} />
-          <Route path="/groups" element={<GroupManagementPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+
+          <Route
+            element={<ProtectedRoute allowedRoles={["admin", "teacher"]} />}
+          >
+            <Route path="/subjects" element={<SubjectManagementPage />} />
+            <Route path="/exams/new" element={<ExamBuilderPage />} />
+            <Route path="/exams/:id/edit" element={<ExamBuilderPage />} />
+            <Route path="/exams/:id/preview" element={<ExamPreviewPage />} />
+            <Route path="/questions" element={<QuestionManagementPage />} />
+            <Route path="/groups" element={<GroupManagementPage />} />
+          </Route>
         </Route>
       </Route>
 

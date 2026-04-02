@@ -40,8 +40,12 @@ const ProfileInfoTab = () => {
       dispatch(
         setCredentials({
           token: token ?? "",
-          user: { ...user, fullName: updated.fullName, username: updated.username },
-        })
+          user: {
+            ...user,
+            fullName: updated.fullName,
+            username: updated.username,
+          },
+        }),
       );
       toast.success("Cập nhật thông tin thành công");
     } catch (err: unknown) {
@@ -58,7 +62,12 @@ const ProfileInfoTab = () => {
     setUploadingAvatar(true);
     try {
       const fileName = await userService.uploadAvatar(file);
-      dispatch(setCredentials({ token: token ?? "", user: { ...user, avatar: fileName } }));
+      dispatch(
+        setCredentials({
+          token: token ?? "",
+          user: { ...user, avatar: fileName },
+        }),
+      );
       toast.success("Cập nhật avatar thành công");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Upload thất bại";
@@ -76,7 +85,11 @@ const ProfileInfoTab = () => {
       <div className="profile-page__avatar-row">
         <div className="profile-page__avatar-wrap">
           {avatarUrl ? (
-            <img src={avatarUrl} alt="avatar" className="profile-page__avatar-img" />
+            <img
+              src={avatarUrl}
+              alt="avatar"
+              className="profile-page__avatar-img"
+            />
           ) : (
             <div className="profile-page__avatar">
               {(user.fullName || user.username || "U").charAt(0).toUpperCase()}
@@ -100,11 +113,15 @@ const ProfileInfoTab = () => {
           />
         </div>
         <div>
-          <div className="profile-page__avatar-name">{user.fullName || user.username}</div>
+          <div className="profile-page__avatar-name">
+            {user.fullName || user.username}
+          </div>
           <div className="profile-page__avatar-roles">
             {user.roles?.join(", ") ?? "student"}
           </div>
-          {uploadingAvatar && <div className="profile-page__hint">Đang upload...</div>}
+          {uploadingAvatar && (
+            <div className="profile-page__hint">Đang upload...</div>
+          )}
         </div>
       </div>
 
@@ -137,7 +154,9 @@ const ProfileInfoTab = () => {
             value={user.email}
             readOnly
           />
-          <span className="profile-page__hint">Email dùng để đăng nhập, không thể thay đổi</span>
+          <span className="profile-page__hint">
+            Email dùng để đăng nhập, không thể thay đổi
+          </span>
         </div>
 
         <div className="profile-page__field">
@@ -188,7 +207,9 @@ const ChangePasswordTab = () => {
   if (!user) return null;
 
   // --- Mode: mật khẩu hiện tại ---
-  const handleChangeWithCurrentPwd = async (e: React.SyntheticEvent<HTMLFormElement>) => {
+  const handleChangeWithCurrentPwd = async (
+    e: React.SyntheticEvent<HTMLFormElement>,
+  ) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
       toast.error("Mật khẩu mới và xác nhận không khớp");
@@ -226,7 +247,9 @@ const ChangePasswordTab = () => {
     }
   };
 
-  const handleResetWithOtp = async (e: React.SyntheticEvent<HTMLFormElement>) => {
+  const handleResetWithOtp = async (
+    e: React.SyntheticEvent<HTMLFormElement>,
+  ) => {
     e.preventDefault();
     if (otpNewPassword !== otpConfirmPassword) {
       toast.error("Mật khẩu mới và xác nhận không khớp");
@@ -272,7 +295,10 @@ const ChangePasswordTab = () => {
         <button
           type="button"
           className={`profile-page__mode-btn ${mode === "otp" ? "profile-page__mode-btn--active" : ""}`}
-          onClick={() => { setMode("otp"); setOtpSent(false); }}
+          onClick={() => {
+            setMode("otp");
+            setOtpSent(false);
+          }}
         >
           <IoMailOutline />
           Quên mật khẩu — dùng OTP
@@ -287,9 +313,10 @@ const ChangePasswordTab = () => {
             <p>Nhập mật khẩu hiện tại và mật khẩu mới để đổi.</p>
           </div>
 
-          <div className="profile-page__field profile-page__field--full" style={{ marginBottom: "0.75rem" }}>
+          <div className="profile-page__field profile-page__field--full profile-page__field--spaced">
             <label className="profile-page__label">
-              Mật khẩu hiện tại <span className="profile-page__required">*</span>
+              Mật khẩu hiện tại{" "}
+              <span className="profile-page__required">*</span>
             </label>
             <input
               className="profile-page__input"
@@ -317,7 +344,8 @@ const ChangePasswordTab = () => {
             </div>
             <div className="profile-page__field">
               <label className="profile-page__label">
-                Xác nhận mật khẩu mới <span className="profile-page__required">*</span>
+                Xác nhận mật khẩu mới{" "}
+                <span className="profile-page__required">*</span>
               </label>
               <input
                 className={`profile-page__input ${confirmPassword && confirmPassword !== newPassword ? "profile-page__input--error" : ""}`}
@@ -328,7 +356,9 @@ const ChangePasswordTab = () => {
                 required
               />
               {confirmPassword && confirmPassword !== newPassword && (
-                <span className="profile-page__error-msg">Mật khẩu không khớp</span>
+                <span className="profile-page__error-msg">
+                  Mật khẩu không khớp
+                </span>
               )}
             </div>
           </div>
@@ -347,7 +377,8 @@ const ChangePasswordTab = () => {
           <div className="profile-page__pwd-info">
             <IoMailOutline className="profile-page__pwd-icon" />
             <p>
-              Hệ thống sẽ gửi mã OTP đến email <strong>{user.email}</strong>. Nhập mã OTP và mật khẩu mới để đặt lại.
+              Hệ thống sẽ gửi mã OTP đến email <strong>{user.email}</strong>.
+              Nhập mã OTP và mật khẩu mới để đặt lại.
             </p>
           </div>
 
@@ -366,7 +397,7 @@ const ChangePasswordTab = () => {
             </div>
           ) : (
             <form onSubmit={(e) => void handleResetWithOtp(e)}>
-              <div className="profile-page__field profile-page__field--full" style={{ marginBottom: "0.75rem" }}>
+              <div className="profile-page__field profile-page__field--full profile-page__field--spaced">
                 <label className="profile-page__label">
                   Mã OTP <span className="profile-page__required">*</span>
                 </label>
@@ -393,7 +424,8 @@ const ChangePasswordTab = () => {
               <div className="profile-page__form-grid">
                 <div className="profile-page__field">
                   <label className="profile-page__label">
-                    Mật khẩu mới <span className="profile-page__required">*</span>
+                    Mật khẩu mới{" "}
+                    <span className="profile-page__required">*</span>
                   </label>
                   <input
                     className="profile-page__input"
@@ -406,7 +438,8 @@ const ChangePasswordTab = () => {
                 </div>
                 <div className="profile-page__field">
                   <label className="profile-page__label">
-                    Xác nhận mật khẩu mới <span className="profile-page__required">*</span>
+                    Xác nhận mật khẩu mới{" "}
+                    <span className="profile-page__required">*</span>
                   </label>
                   <input
                     className={`profile-page__input ${otpConfirmPassword && otpConfirmPassword !== otpNewPassword ? "profile-page__input--error" : ""}`}
@@ -416,14 +449,21 @@ const ChangePasswordTab = () => {
                     placeholder="Nhập lại mật khẩu mới"
                     required
                   />
-                  {otpConfirmPassword && otpConfirmPassword !== otpNewPassword && (
-                    <span className="profile-page__error-msg">Mật khẩu không khớp</span>
-                  )}
+                  {otpConfirmPassword &&
+                    otpConfirmPassword !== otpNewPassword && (
+                      <span className="profile-page__error-msg">
+                        Mật khẩu không khớp
+                      </span>
+                    )}
                 </div>
               </div>
 
               <div className="profile-page__form-actions">
-                <Button type="submit" iconLeft={<IoKeyOutline />} disabled={verifying}>
+                <Button
+                  type="submit"
+                  iconLeft={<IoKeyOutline />}
+                  disabled={verifying}
+                >
                   {verifying ? "Đang xác nhận..." : "Đặt lại mật khẩu"}
                 </Button>
               </div>
@@ -455,7 +495,9 @@ const ProfilePage = () => {
             <IoShieldCheckmarkOutline />
             <span>Vai trò:</span>
             {user.roles.map((r) => (
-              <span key={r} className="profile-page__role-badge">{r}</span>
+              <span key={r} className="profile-page__role-badge">
+                {r}
+              </span>
             ))}
           </div>
         )}

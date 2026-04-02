@@ -8,7 +8,7 @@ import type { ApiResponse, AuthApiData } from '../types/auth'
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5082'
 
 const axiosClient = axios.create({
-    baseURL: `${BASE_URL}/api/v1`,
+    baseURL: `${BASE_URL}`,
     headers: {
         'Content-Type': 'application/json',
     },
@@ -23,6 +23,25 @@ let pendingQueue: Array<{
     reject: (err: unknown) => void
 }> = []
 
+function getApiErrorMessage(data?: ApiErrorResponse): string | null {
+    if (!data) return null
+
+    const detailMessages = data.error?.details
+        ?.map((detail) => {
+            const field = detail.field?.trim()
+            const message = detail.message?.trim()
+            if (!message) return null
+            return field ? `${field}: ${message}` : message
+        })
+        .filter((message): message is string => Boolean(message))
+
+    if (detailMessages && detailMessages.length > 0) {
+        return detailMessages.join('; ')
+    }
+
+    return data.error?.reason || data.message || data.errors?.[0] || null
+}
+
 function processPendingQueue(error: unknown, token: string | null) {
     pendingQueue.forEach(({ resolve, reject }) => {
         if (error) {
@@ -36,14 +55,17 @@ function processPendingQueue(error: unknown, token: string | null) {
 
 async function doRefresh(): Promise<string> {
     // Gọi thẳng axios để tránh circular qua interceptor
+    const currentRefreshToken = storage.getRefreshToken()
     const res = await axios.post<ApiResponse<AuthApiData>>(
-        `${BASE_URL}/api/v1/auth/refresh`,
-        {},
+        `${BASE_URL}/auth/refresh`,
+        { refreshToken: currentRefreshToken },
         { withCredentials: true },
     )
     const newToken = res.data.data.access_token
+    const newRefreshToken = res.data.data.refresh_token
     const user = res.data.data.user
     storage.setToken(newToken)
+    if (newRefreshToken) storage.setRefreshToken(newRefreshToken)
     storage.setUser(user)
     return newToken
 }
@@ -89,7 +111,6 @@ axiosClient.interceptors.request.use(
             }
         }
 
-        // Token sắp hết hạn (< 60s) — refresh proactively, không block request
         if (isTokenExpiringSoon(token)) {
             if (!isRefreshing) {
                 isRefreshing = true
@@ -151,13 +172,7 @@ axiosClient.interceptors.response.use(
         }
 
         const data = error.response?.data
-        const message =
-            data?.error?.reason ||
-            data?.error?.details?.[0]?.message ||
-            data?.message ||
-            data?.errors?.[0] ||
-            error.message ||
-            'Unexpected API error'
+        const message = getApiErrorMessage(data) || error.message || 'Unexpected API error'
 
         return Promise.reject(new Error(message))
     },

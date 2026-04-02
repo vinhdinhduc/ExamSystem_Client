@@ -1,23 +1,25 @@
 export interface GroupMember {
-    id: string
+    groupId: number
+    userId: string
     fullName: string
     email: string
-    avatar: string | null
-    joinedAt?: string
+    joinedAt: string
 }
 
 export interface Group {
     id: number
-    groupCode: string
-    groupName: string
+    code: string
+    name: string
     description: string | null
+    createdByUserId: string
+    createdAt: string
     members: GroupMember[]
-    createdAt?: string
 }
 
 export interface GroupPayload {
-    groupCode: string
-    groupName: string
+    createdByUserId: string
+    code: string
+    name: string
     description: string
 }
 

@@ -1,23 +1,70 @@
 import axiosClient from '../axiosClient'
-import type { SessionAnswerDraft } from '../../types/examSession'
-import type { Result } from '../../types/result'
+import type {
+    ExamSessionReviewResult,
+    StartExamResponse,
+    SubmitExamResult,
+    SaveProgressRequest,
+    SaveProgressResponse,
+    ExamViolationRequest,
+    ExamViolationResponse,
+} from '../../types/examSession'
+import type { ApiResponse } from '../../types/api'
+
+const unwrapApiData = <T>(payload: ApiResponse<T> | T): T => {
+    if (payload && typeof payload === 'object' && 'data' in (payload as Record<string, unknown>)) {
+        return (payload as ApiResponse<T>).data
+    }
+
+    return payload as T
+}
 
 export const examSessionService = {
-    startSession: async (examId: string): Promise<{ sessionId: string; remainingTime: number }> => {
-        const response = await axiosClient.post<{ sessionId: string; remainingTime: number }>(
-            `/exam-sessions/start`,
-            { examId },
+    startSession: async (
+        examId: string,
+        payload: { userId?: string; accessCode?: string | null },
+    ): Promise<StartExamResponse> => {
+        const response = await axiosClient.post<
+            ApiResponse<StartExamResponse> | StartExamResponse
+        >(`/exam-sessions/${examId}/start`, payload)
+
+        return unwrapApiData(response.data)
+    },
+    saveProgress: async (payload: SaveProgressRequest): Promise<SaveProgressResponse> => {
+        const response = await axiosClient.post<
+            ApiResponse<SaveProgressResponse> | SaveProgressResponse
+        >('/exam/save-progress', payload)
+        return unwrapApiData(response.data)
+    },
+    reportViolation: async (payload: ExamViolationRequest): Promise<ExamViolationResponse> => {
+        const response = await axiosClient.post<
+            ApiResponse<ExamViolationResponse> | ExamViolationResponse
+        >('/exam/violation', payload)
+        return unwrapApiData(response.data)
+    },
+    submitExamV1: async (payload: { sessionId: string; userId?: string }): Promise<SubmitExamResult> => {
+        const response = await axiosClient.post<ApiResponse<SubmitExamResult> | SubmitExamResult>(
+            '/exam/submit',
+            payload,
         )
-        return response.data
+        return unwrapApiData(response.data)
     },
-    autosaveAnswers: async (
+    autosaveAnswer: async (
         sessionId: string,
-        payload: { answers: SessionAnswerDraft[]; currentQuestion: number; remainingTime: number },
+        payload: { userId?: string; questionId: string; answerIds: number[] },
     ): Promise<void> => {
-        await axiosClient.post(`/exam-sessions/${sessionId}/autosave`, payload)
+        await axiosClient.put(`/exam-sessions/${sessionId}/autosave`, payload)
     },
-    submitSession: async (sessionId: string): Promise<Result> => {
-        const response = await axiosClient.post<Result>(`/exam-sessions/${sessionId}/submit`)
-        return response.data
+    submitSession: async (sessionId: string, payload: { userId?: string }): Promise<SubmitExamResult> => {
+        const response = await axiosClient.post<ApiResponse<SubmitExamResult> | SubmitExamResult>(
+            `/exam-sessions/${sessionId}/submit`,
+            payload,
+        )
+        return unwrapApiData(response.data)
+    },
+    getSessionReview: async (sessionId: string): Promise<ExamSessionReviewResult> => {
+        const response = await axiosClient.get<
+            ApiResponse<ExamSessionReviewResult> | ExamSessionReviewResult
+        >(`/exam-sessions/${sessionId}/review`)
+        return unwrapApiData(response.data)
     },
 }

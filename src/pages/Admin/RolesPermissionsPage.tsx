@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import {
-  IoArrowForwardOutline,
-  IoPeopleOutline,
-} from "react-icons/io5";
+import { IoArrowForwardOutline, IoPeopleOutline } from "react-icons/io5";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import ConfirmModal from "../../components/ui/ConfirmModal";
@@ -29,7 +26,8 @@ const RolesTab = () => {
   const [roleDesc, setRoleDesc] = useState("");
 
   const [permModalOpen, setPermModalOpen] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<RoleWithPermissionsDto | null>(null);
+  const [selectedRole, setSelectedRole] =
+    useState<RoleWithPermissionsDto | null>(null);
   const [checkedPermIds, setCheckedPermIds] = useState<Set<string>>(new Set());
 
   const [deleteTarget, setDeleteTarget] = useState<RoleDto | null>(null);
@@ -44,11 +42,13 @@ const RolesTab = () => {
       setRoles(rolesData.result);
       setAllPermissions(permsData.result);
     } catch {
-      toast.error("Không thể tải danh sách roles");
+      toast.error("Không thể tải danh sách vai trò");
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const openCreate = () => {
     setEditingRole(null);
@@ -69,11 +69,14 @@ const RolesTab = () => {
     if (!roleName.trim()) return;
     try {
       if (editingRole) {
-        await roleService.updateRole(editingRole.id, { name: roleName, description: roleDesc });
-        toast.success("Cập nhật role thành công");
+        await roleService.updateRole(editingRole.id, {
+          name: roleName,
+          description: roleDesc,
+        });
+        toast.success("Cập nhật vai trò thành công");
       } else {
         await roleService.createRole({ name: roleName, description: roleDesc });
-        toast.success("Tạo role thành công");
+        toast.success("Tạo vai trò thành công");
       }
       setRoleModalOpen(false);
       void load();
@@ -87,7 +90,7 @@ const RolesTab = () => {
     setDeleting(true);
     try {
       await roleService.deleteRole(deleteTarget.id);
-      toast.success("Đã xóa role");
+      toast.success("Đã xóa vai trò");
       setDeleteTarget(null);
       void load();
     } catch {
@@ -104,15 +107,18 @@ const RolesTab = () => {
       setCheckedPermIds(new Set(data.permissions.map((p) => p.id)));
       setPermModalOpen(true);
     } catch {
-      toast.error("Không thể tải permissions của role");
+      toast.error("Không thể tải quyền của vai trò");
     }
   };
 
   const handleSavePerms = async () => {
     if (!selectedRole) return;
     try {
-      await roleService.assignPermissions(selectedRole.id, Array.from(checkedPermIds));
-      toast.success("Cập nhật permissions thành công");
+      await roleService.assignPermissions(
+        selectedRole.id,
+        Array.from(checkedPermIds),
+      );
+      toast.success("Cập nhật quyền hạn thành công");
       setPermModalOpen(false);
     } catch {
       toast.error("Cập nhật thất bại");
@@ -130,14 +136,18 @@ const RolesTab = () => {
   return (
     <>
       <div className="admin-page__toolbar">
-        <h3 className="admin-page__section-title">Danh sách Roles</h3>
-        <Button onClick={openCreate}>+ Thêm Role</Button>
+        <h3 className="admin-page__section-title">Danh sách vai trò</h3>
+        <Button onClick={openCreate}>+ Thêm vai trò</Button>
       </div>
 
       <Table
         columns={[
-          { key: "name", title: "Tên Role" },
-          { key: "description", title: "Mô tả", render: (r) => r.description ?? "—" },
+          { key: "name", title: "Tên vai trò" },
+          {
+            key: "description",
+            title: "Mô tả",
+            render: (r) => r.description ?? "—",
+          },
           {
             key: "createdAt",
             title: "Ngày tạo",
@@ -148,11 +158,18 @@ const RolesTab = () => {
             title: "Thao tác",
             render: (r) => (
               <div className="admin-page__row-actions">
-                <Button variant="outline" onClick={() => void openAssignPerms(r)}>
-                  Permissions
+                <Button
+                  variant="outline"
+                  onClick={() => void openAssignPerms(r)}
+                >
+                  Phân quyền
                 </Button>
-                <Button variant="outline" onClick={() => openEdit(r)}>Sửa</Button>
-                <Button variant="danger" onClick={() => setDeleteTarget(r)}>Xóa</Button>
+                <Button variant="outline" onClick={() => openEdit(r)}>
+                  Sửa
+                </Button>
+                <Button variant="danger" onClick={() => setDeleteTarget(r)}>
+                  Xóa
+                </Button>
               </div>
             ),
           },
@@ -164,12 +181,15 @@ const RolesTab = () => {
       {/* Create/Edit Role Modal */}
       <Modal
         open={roleModalOpen}
-        title={editingRole ? "Sửa Role" : "Tạo Role mới"}
+        title={editingRole ? "Sửa vai trò" : "Tạo vai trò mới"}
         onClose={() => setRoleModalOpen(false)}
       >
-        <form className="admin-page__form" onSubmit={(e) => void handleSaveRole(e)}>
+        <form
+          className="admin-page__form"
+          onSubmit={(e) => void handleSaveRole(e)}
+        >
           <label className="admin-page__label">
-            Tên Role <span className="admin-page__required">*</span>
+            Tên vai trò <span className="admin-page__required">*</span>
           </label>
           <input
             className="admin-page__input"
@@ -186,8 +206,16 @@ const RolesTab = () => {
             placeholder="Mô tả vai trò (tuỳ chọn)"
           />
           <div className="admin-page__form-actions">
-            <Button type="button" variant="ghost" onClick={() => setRoleModalOpen(false)}>Hủy</Button>
-            <Button type="submit">{editingRole ? "Lưu thay đổi" : "Tạo mới"}</Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setRoleModalOpen(false)}
+            >
+              Hủy
+            </Button>
+            <Button type="submit">
+              {editingRole ? "Lưu thay đổi" : "Tạo mới"}
+            </Button>
           </div>
         </form>
       </Modal>
@@ -195,12 +223,12 @@ const RolesTab = () => {
       {/* Assign Permissions Modal */}
       <Modal
         open={permModalOpen}
-        title={`Permissions của role: ${selectedRole?.name ?? ""}`}
+        title={`Quyền hạn của vai trò: ${selectedRole?.name ?? ""}`}
         onClose={() => setPermModalOpen(false)}
       >
         <div className="admin-page__perm-list">
           {allPermissions.length === 0 && (
-            <p className="admin-page__empty">Chưa có permissions nào</p>
+            <p className="admin-page__empty">Chưa có quyền hạn nào</p>
           )}
           {allPermissions.map((p) => (
             <label key={p.id} className="admin-page__perm-item">
@@ -217,16 +245,18 @@ const RolesTab = () => {
           ))}
         </div>
         <div className="admin-page__form-actions">
-          <Button variant="ghost" onClick={() => setPermModalOpen(false)}>Hủy</Button>
-          <Button onClick={() => void handleSavePerms()}>Lưu permissions</Button>
+          <Button variant="ghost" onClick={() => setPermModalOpen(false)}>
+            Hủy
+          </Button>
+          <Button onClick={() => void handleSavePerms()}>Lưu quyền hạn</Button>
         </div>
       </Modal>
 
       {/* Delete Role Confirm */}
       <ConfirmModal
         open={deleteTarget !== null}
-        title="Xóa Role"
-        message={`Bạn có chắc muốn xóa role "${deleteTarget?.name ?? ""}"? Hành động này không thể hoàn tác.`}
+        title="Xóa vai trò"
+        message={`Bạn có chắc muốn xóa vai trò "${deleteTarget?.name ?? ""}"? Hành động này không thể hoàn tác.`}
         confirmLabel="Xóa"
         loading={deleting}
         onConfirm={() => void handleDeleteConfirm()}
@@ -252,11 +282,13 @@ const PermissionsTab = () => {
       const data = await roleService.getPermissions();
       setPermissions(data.result);
     } catch {
-      toast.error("Không thể tải permissions");
+      toast.error("Không thể tải danh sách quyền hạn");
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const openCreate = () => {
     setEditing(null);
@@ -277,11 +309,14 @@ const PermissionsTab = () => {
     if (!code.trim()) return;
     try {
       if (editing) {
-        await roleService.updatePermission(editing.id, { code, description: desc });
+        await roleService.updatePermission(editing.id, {
+          code,
+          description: desc,
+        });
         toast.success("Cập nhật thành công");
       } else {
         await roleService.createPermission({ code, description: desc });
-        toast.success("Tạo permission thành công");
+        toast.success("Tạo quyền hạn thành công");
       }
       setModalOpen(false);
       void load();
@@ -308,21 +343,29 @@ const PermissionsTab = () => {
   return (
     <>
       <div className="admin-page__toolbar">
-        <h3 className="admin-page__section-title">Danh sách Permissions</h3>
-        <Button onClick={openCreate}>+ Thêm Permission</Button>
+        <h3 className="admin-page__section-title">Danh sách quyền hạn</h3>
+        <Button onClick={openCreate}>+ Thêm quyền hạn</Button>
       </div>
 
       <Table
         columns={[
-          { key: "code", title: "Mã Permission" },
-          { key: "description", title: "Mô tả", render: (p) => p.description ?? "—" },
+          { key: "code", title: "Mã quyền hạn" },
+          {
+            key: "description",
+            title: "Mô tả",
+            render: (p) => p.description ?? "—",
+          },
           {
             key: "actions",
             title: "Thao tác",
             render: (p) => (
               <div className="admin-page__row-actions">
-                <Button variant="outline" onClick={() => openEdit(p)}>Sửa</Button>
-                <Button variant="danger" onClick={() => setDeleteTarget(p)}>Xóa</Button>
+                <Button variant="outline" onClick={() => openEdit(p)}>
+                  Sửa
+                </Button>
+                <Button variant="danger" onClick={() => setDeleteTarget(p)}>
+                  Xóa
+                </Button>
               </div>
             ),
           },
@@ -333,12 +376,12 @@ const PermissionsTab = () => {
 
       <Modal
         open={modalOpen}
-        title={editing ? "Sửa Permission" : "Tạo Permission mới"}
+        title={editing ? "Sửa quyền hạn" : "Tạo quyền hạn mới"}
         onClose={() => setModalOpen(false)}
       >
         <form className="admin-page__form" onSubmit={(e) => void handleSave(e)}>
           <label className="admin-page__label">
-            Mã Permission <span className="admin-page__required">*</span>
+            Mã quyền hạn <span className="admin-page__required">*</span>
           </label>
           <input
             className="admin-page__input"
@@ -355,16 +398,24 @@ const PermissionsTab = () => {
             placeholder="Mô tả quyền (tuỳ chọn)"
           />
           <div className="admin-page__form-actions">
-            <Button type="button" variant="ghost" onClick={() => setModalOpen(false)}>Hủy</Button>
-            <Button type="submit">{editing ? "Lưu thay đổi" : "Tạo mới"}</Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setModalOpen(false)}
+            >
+              Hủy
+            </Button>
+            <Button type="submit">
+              {editing ? "Lưu thay đổi" : "Tạo mới"}
+            </Button>
           </div>
         </form>
       </Modal>
 
       <ConfirmModal
         open={deleteTarget !== null}
-        title="Xóa Permission"
-        message={`Bạn có chắc muốn xóa permission "${deleteTarget?.code ?? ""}"?`}
+        title="Xóa quyền hạn"
+        message={`Bạn có chắc muốn xóa quyền hạn "${deleteTarget?.code ?? ""}"?`}
         confirmLabel="Xóa"
         loading={deleting}
         onConfirm={() => void handleDeleteConfirm()}
@@ -383,9 +434,12 @@ const UsersShortcut = () => {
         <IoPeopleOutline />
       </div>
       <div>
-        <div className="admin-page__users-shortcut-title">Quản lý người dùng</div>
+        <div className="admin-page__users-shortcut-title">
+          Quản lý người dùng
+        </div>
         <div className="admin-page__users-shortcut-desc">
-          Tạo, sửa, xóa, khóa tài khoản và gán roles cho người dùng tại trang quản lý riêng.
+          Tạo, sửa, xóa, khóa tài khoản và gán vai trò cho người dùng tại trang
+          quản lý riêng.
         </div>
       </div>
       <Button
@@ -403,13 +457,13 @@ const RolesPermissionsPage = () => {
   const [activeTab, setActiveTab] = useState<Tab>("roles");
 
   const tabLabels: Record<Tab, string> = {
-    roles: "Roles",
-    permissions: "Permissions",
+    roles: "Vai trò",
+    permissions: "Quyền hạn",
   };
 
   return (
     <section className="admin-page">
-      <Card title="Quản lý Roles & Permissions">
+      <Card title="Quản lý vai trò và quyền hạn">
         <div className="admin-page__tabs">
           {(["roles", "permissions"] as Tab[]).map((tab) => (
             <button

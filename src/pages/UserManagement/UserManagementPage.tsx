@@ -31,7 +31,12 @@ interface CreateUserModalProps {
   onSaved: () => void;
 }
 
-const CreateUserModal = ({ allRoles, onClose, onSaved }: CreateUserModalProps) => {
+const CreateUserModal = ({
+  allRoles,
+  onClose,
+  onSaved,
+}: CreateUserModalProps) => {
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -56,8 +61,15 @@ const CreateUserModal = ({ allRoles, onClose, onSaved }: CreateUserModalProps) =
     setSaving(true);
     try {
       // Dùng authService.register — đúng luồng xác thực như trang Register
-      const result = await authService.register({ email, password });
-      toast.success(`Đã tạo tài khoản cho ${result.email}. Email xác thực đã được gửi.`);
+      const result = await authService.register({
+        username,
+        email,
+        password,
+        confirmPassword,
+      });
+      toast.success(
+        `Đã tạo tài khoản cho ${result.email}. Email xác thực đã được gửi.`,
+      );
       // Tìm user vừa tạo để gán roles nếu có
       if (checkedRoleIds.size > 0) {
         const usersData = await userService.getUsers(1, 200);
@@ -79,7 +91,22 @@ const CreateUserModal = ({ allRoles, onClose, onSaved }: CreateUserModalProps) =
     <Modal open title="Thêm người dùng mới" size="lg" onClose={onClose}>
       <form className="user-mgmt__form" onSubmit={(e) => void handleSubmit(e)}>
         <div className="user-mgmt__create-note">
-          Tài khoản sẽ được tạo qua luồng đăng ký — hệ thống gửi email xác thực đến người dùng.
+          Tài khoản sẽ được tạo qua luồng đăng ký — hệ thống gửi email xác thực
+          đến người dùng.
+        </div>
+
+        <div className="user-mgmt__field">
+          <label className="user-mgmt__label">
+            Tên đăng nhập <span className="user-mgmt__required">*</span>
+          </label>
+          <input
+            className="user-mgmt__input"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="username"
+            autoComplete="username"
+            required
+          />
         </div>
 
         <div className="user-mgmt__field">
@@ -168,7 +195,12 @@ const CreateUserModal = ({ allRoles, onClose, onSaved }: CreateUserModalProps) =
         </div>
 
         <div className="user-mgmt__form-actions">
-          <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onClose}
+            disabled={saving}
+          >
             Hủy
           </Button>
           <Button type="submit" disabled={saving}>
@@ -188,16 +220,24 @@ interface EditUserModalProps {
   onSaved: () => void;
 }
 
-const EditUserModal = ({ user, allRoles, onClose, onSaved }: EditUserModalProps) => {
+const EditUserModal = ({
+  user,
+  allRoles,
+  onClose,
+  onSaved,
+}: EditUserModalProps) => {
   const [fullName, setFullName] = useState(user.fullName ?? "");
   const [username, setUsername] = useState(user.username ?? "");
   const [checkedRoleIds, setCheckedRoleIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    userService.getUserWithRoles(user.id)
+    userService
+      .getUserWithRoles(user.id)
       .then((data) => setCheckedRoleIds(new Set(data.roles.map((r) => r.id))))
-      .catch(() => {/* ignore */});
+      .catch(() => {
+        /* ignore */
+      });
   }, [user.id]);
 
   const toggleRole = (id: string) =>
@@ -228,7 +268,12 @@ const EditUserModal = ({ user, allRoles, onClose, onSaved }: EditUserModalProps)
   };
 
   return (
-    <Modal open title={`Sửa người dùng: ${user.username}`} size="lg" onClose={onClose}>
+    <Modal
+      open
+      title={`Sửa người dùng: ${user.username}`}
+      size="lg"
+      onClose={onClose}
+    >
       <form className="user-mgmt__form" onSubmit={(e) => void handleSubmit(e)}>
         <div className="user-mgmt__form-grid">
           <div className="user-mgmt__field">
@@ -288,7 +333,12 @@ const EditUserModal = ({ user, allRoles, onClose, onSaved }: EditUserModalProps)
         </div>
 
         <div className="user-mgmt__form-actions">
-          <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onClose}
+            disabled={saving}
+          >
             Hủy
           </Button>
           <Button type="submit" disabled={saving}>
@@ -311,7 +361,8 @@ const ViewUserModal = ({ userId, onClose, onEdit }: ViewUserModalProps) => {
   const [detail, setDetail] = useState<UserWithRolesDto | null>(null);
 
   useEffect(() => {
-    userService.getUserWithRoles(userId)
+    userService
+      .getUserWithRoles(userId)
       .then(setDetail)
       .catch(() => toast.error("Không thể tải thông tin người dùng"));
   }, [userId]);
@@ -330,10 +381,14 @@ const ViewUserModal = ({ userId, onClose, onEdit }: ViewUserModalProps) => {
         {/* Avatar + tên */}
         <div className="user-mgmt__detail-header">
           <div className="user-mgmt__detail-avatar">
-            {(detail.fullName || detail.username || "U").charAt(0).toUpperCase()}
+            {(detail.fullName || detail.username || "U")
+              .charAt(0)
+              .toUpperCase()}
           </div>
           <div>
-            <div className="user-mgmt__detail-name">{detail.fullName || "—"}</div>
+            <div className="user-mgmt__detail-name">
+              {detail.fullName || "—"}
+            </div>
             <div className="user-mgmt__detail-username">@{detail.username}</div>
             <span
               className={`user-mgmt__status ${detail.isActive ? "user-mgmt__status--active" : "user-mgmt__status--inactive"}`}
@@ -353,27 +408,39 @@ const ViewUserModal = ({ userId, onClose, onEdit }: ViewUserModalProps) => {
             <span className="user-mgmt__detail-label">Ngày tạo</span>
             <span className="user-mgmt__detail-value">
               {new Date(detail.createdAt).toLocaleDateString("vi-VN", {
-                year: "numeric", month: "long", day: "numeric",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
               })}
             </span>
           </div>
           <div className="user-mgmt__detail-item user-mgmt__detail-item--full">
             <span className="user-mgmt__detail-label">Roles được gán</span>
             <div className="user-mgmt__role-badges">
-              {detail.roles.length > 0
-                ? detail.roles.map((r) => (
-                    <span key={r.id} className="user-mgmt__role-badge" title={r.description ?? ""}>
-                      {r.name}
-                    </span>
-                  ))
-                : <span className="user-mgmt__no-role">Chưa có role nào</span>}
+              {detail.roles.length > 0 ? (
+                detail.roles.map((r) => (
+                  <span
+                    key={r.id}
+                    className="user-mgmt__role-badge"
+                    title={r.description ?? ""}
+                  >
+                    {r.name}
+                  </span>
+                ))
+              ) : (
+                <span className="user-mgmt__no-role">Chưa có role nào</span>
+              )}
             </div>
           </div>
         </div>
 
         <div className="user-mgmt__detail-actions">
-          <Button variant="ghost" onClick={onClose}>Đóng</Button>
-          <Button iconLeft={<IoPencilOutline />} onClick={onEdit}>Sửa</Button>
+          <Button variant="ghost" onClick={onClose}>
+            Đóng
+          </Button>
+          <Button iconLeft={<IoPencilOutline />} onClick={onEdit}>
+            Sửa
+          </Button>
         </div>
       </div>
     </Modal>
@@ -388,7 +455,9 @@ const UserManagementPage = () => {
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
-  const [filterActive, setFilterActive] = useState<"all" | "active" | "inactive">("all");
+  const [filterActive, setFilterActive] = useState<
+    "all" | "active" | "inactive"
+  >("all");
   const pageSize = 20;
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -418,12 +487,17 @@ const UserManagementPage = () => {
     }
   }, [page]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const handleSearchChange = (value: string) => {
     setSearchInput(value);
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    searchTimeout.current = setTimeout(() => { setSearch(value); setPage(1); }, 400);
+    searchTimeout.current = setTimeout(() => {
+      setSearch(value);
+      setPage(1);
+    }, 400);
   };
 
   const displayed = users.filter((u) => {
@@ -442,7 +516,10 @@ const UserManagementPage = () => {
 
   const totalPages = Math.ceil(total / pageSize) || 1;
 
-  const handleSaved = () => { setModal({ type: "none" }); void load(); };
+  const handleSaved = () => {
+    setModal({ type: "none" });
+    void load();
+  };
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
@@ -465,9 +542,13 @@ const UserManagementPage = () => {
     try {
       const updated = await userService.toggleLock(lockTarget.id);
       setUsers((prev) =>
-        prev.map((u) => (u.id === updated.id ? { ...u, isActive: updated.isActive } : u))
+        prev.map((u) =>
+          u.id === updated.id ? { ...u, isActive: updated.isActive } : u,
+        ),
       );
-      toast.success(`Đã ${updated.isActive ? "mở khóa" : "khóa"} tài khoản "${updated.username}"`);
+      toast.success(
+        `Đã ${updated.isActive ? "mở khóa" : "khóa"} tài khoản "${updated.username}"`,
+      );
       setLockTarget(null);
     } catch {
       toast.error("Thao tác thất bại");
@@ -482,7 +563,10 @@ const UserManagementPage = () => {
         title="Quản lý người dùng"
         subtitle={`Tổng cộng ${total} tài khoản`}
         actions={
-          <Button iconLeft={<IoAddOutline />} onClick={() => setModal({ type: "create" })}>
+          <Button
+            iconLeft={<IoAddOutline />}
+            onClick={() => setModal({ type: "create" })}
+          >
             Thêm người dùng
           </Button>
         }
@@ -504,9 +588,16 @@ const UserManagementPage = () => {
                 key={f}
                 type="button"
                 className={`user-mgmt__filter-btn ${filterActive === f ? "user-mgmt__filter-btn--active" : ""}`}
-                onClick={() => { setFilterActive(f); setPage(1); }}
+                onClick={() => {
+                  setFilterActive(f);
+                  setPage(1);
+                }}
               >
-                {f === "all" ? "Tất cả" : f === "active" ? "Đang hoạt động" : "Bị khóa"}
+                {f === "all"
+                  ? "Tất cả"
+                  : f === "active"
+                    ? "Đang hoạt động"
+                    : "Bị khóa"}
               </button>
             ))}
           </div>
@@ -524,7 +615,9 @@ const UserManagementPage = () => {
                     {(u.fullName || u.username || "U").charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <div className="user-mgmt__user-name">{u.fullName || "—"}</div>
+                    <div className="user-mgmt__user-name">
+                      {u.fullName || "—"}
+                    </div>
                     <div className="user-mgmt__user-sub">@{u.username}</div>
                   </div>
                 </div>
@@ -538,10 +631,14 @@ const UserManagementPage = () => {
                 u.roles?.length ? (
                   <div className="user-mgmt__role-badges">
                     {u.roles.map((r) => (
-                      <span key={r} className="user-mgmt__role-badge">{r}</span>
+                      <span key={r} className="user-mgmt__role-badge">
+                        {r}
+                      </span>
                     ))}
                   </div>
-                ) : <span className="user-mgmt__no-role">—</span>,
+                ) : (
+                  <span className="user-mgmt__no-role">—</span>
+                ),
             },
             {
               key: "createdAt",
@@ -552,7 +649,9 @@ const UserManagementPage = () => {
               key: "isActive",
               title: "Trạng thái",
               render: (u) => (
-                <span className={`user-mgmt__status ${u.isActive ? "user-mgmt__status--active" : "user-mgmt__status--inactive"}`}>
+                <span
+                  className={`user-mgmt__status ${u.isActive ? "user-mgmt__status--active" : "user-mgmt__status--inactive"}`}
+                >
                   {u.isActive ? "Hoạt động" : "Bị khóa"}
                 </span>
               ),
@@ -566,7 +665,9 @@ const UserManagementPage = () => {
                     type="button"
                     className="user-mgmt__icon-btn user-mgmt__icon-btn--view"
                     title="Xem chi tiết"
-                    onClick={() => setModal({ type: "view", userId: u.id, user: u })}
+                    onClick={() =>
+                      setModal({ type: "view", userId: u.id, user: u })
+                    }
                   >
                     <IoEyeOutline />
                   </button>
@@ -584,7 +685,11 @@ const UserManagementPage = () => {
                     title={u.isActive ? "Khóa tài khoản" : "Mở khóa"}
                     onClick={() => setLockTarget(u)}
                   >
-                    {u.isActive ? <IoLockClosedOutline /> : <IoLockOpenOutline />}
+                    {u.isActive ? (
+                      <IoLockClosedOutline />
+                    ) : (
+                      <IoLockOpenOutline />
+                    )}
                   </button>
                   <button
                     type="button"
@@ -600,7 +705,11 @@ const UserManagementPage = () => {
           ]}
           data={displayed}
           rowKey={(u) => u.id}
-          emptyText={search ? `Không tìm thấy kết quả cho "${search}"` : "Chưa có người dùng nào"}
+          emptyText={
+            search
+              ? `Không tìm thấy kết quả cho "${search}"`
+              : "Chưa có người dùng nào"
+          }
         />
 
         <Pagination page={page} totalPages={totalPages} onChange={setPage} />
@@ -618,14 +727,18 @@ const UserManagementPage = () => {
         <div className="user-mgmt__stat-card user-mgmt__stat-card--active">
           <IoLockOpenOutline className="user-mgmt__stat-icon" />
           <div>
-            <div className="user-mgmt__stat-value">{users.filter((u) => u.isActive).length}</div>
+            <div className="user-mgmt__stat-value">
+              {users.filter((u) => u.isActive).length}
+            </div>
             <div className="user-mgmt__stat-label">Đang hoạt động</div>
           </div>
         </div>
         <div className="user-mgmt__stat-card user-mgmt__stat-card--locked">
           <IoLockClosedOutline className="user-mgmt__stat-icon" />
           <div>
-            <div className="user-mgmt__stat-value">{users.filter((u) => !u.isActive).length}</div>
+            <div className="user-mgmt__stat-value">
+              {users.filter((u) => !u.isActive).length}
+            </div>
             <div className="user-mgmt__stat-label">Bị khóa</div>
           </div>
         </div>
