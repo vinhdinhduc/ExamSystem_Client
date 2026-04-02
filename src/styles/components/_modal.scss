@@ -1,0 +1,109 @@
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.ui-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+
+    &__backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(18, 30, 50, 0.45);
+        backdrop-filter: blur(3px);
+        border: none;
+        cursor: pointer;
+        width: 100%;
+    }
+
+    &__panel {
+        @include card;
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        max-height: 90dvh;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        animation: modal-in 0.18s ease;
+
+        &--md {
+            max-width: 520px;
+        }
+        &--lg {
+            max-width: 720px;
+        }
+    }
+
+    &__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 1.25rem 1.5rem 1rem;
+        border-bottom: 1px solid $color-border;
+        gap: 1rem;
+    }
+
+    &__title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: $color-text;
+        margin: 0 0 0.2rem;
+    }
+
+    &__description {
+        font-size: 0.83rem;
+        color: $color-muted;
+        margin: 0;
+    }
+
+    &__close {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: $color-muted;
+        font-size: 1.3rem;
+        display: flex;
+        align-items: center;
+        padding: 0.2rem;
+        border-radius: $radius-md;
+        flex-shrink: 0;
+        transition:
+            color 0.15s,
+            background 0.15s;
+
+        &:hover {
+            color: $color-danger;
+            background: rgba($color-danger, 0.06);
+        }
+    }
+
+    &__body {
+        padding: 1.25rem 1.5rem 1.5rem;
+        flex: 1;
+    }
+}
+
+.confirm-modal {
+    &__message {
+        font-size: 0.95rem;
+        color: $color-text;
+        margin: 0 0 1.5rem;
+        line-height: 1.6;
+    }
+}
+
+@keyframes modal-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}

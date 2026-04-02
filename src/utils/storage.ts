@@ -2,6 +2,15 @@ const TOKEN_KEY = 'exam_token'
 const USER_KEY = 'exam_user'
 
 export const storage = {
+    getItem: (key: string): Promise<string | null> => Promise.resolve(localStorage.getItem(key)),
+    setItem: (key: string, value: string): Promise<string> => {
+        localStorage.setItem(key, value)
+        return Promise.resolve(value)
+    },
+    removeItem: (key: string): Promise<void> => {
+        localStorage.removeItem(key)
+        return Promise.resolve()
+    },
     getToken: (): string | null => localStorage.getItem(TOKEN_KEY),
     setToken: (token: string) => localStorage.setItem(TOKEN_KEY, token),
     removeToken: () => localStorage.removeItem(TOKEN_KEY),

@@ -1,32 +1,90 @@
 @use "../variables" as *;
 @use "../mixins" as *;
 
-.btn {
+.ui-button {
     @include button-base;
-    padding: 0.65rem 1rem;
-}
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap;
 
-.btn-full {
-    width: 100%;
-}
+    &__icon {
+        display: flex;
+        align-items: center;
+        font-size: 1.1em;
+    }
 
-.btn-primary {
-    background: $color-primary;
-    color: #fff;
-}
+    &__label {
+        line-height: 1;
+    }
 
-.btn-secondary {
-    background: $color-secondary;
-    color: #fff;
-}
+    // Sizes
+    &--sm {
+        padding: 0.35rem 0.75rem;
+        font-size: 0.8rem;
+    }
+    &--md {
+        padding: 0.55rem 1.1rem;
+        font-size: 0.9rem;
+    }
+    &--lg {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+    }
 
-.btn-outline {
-    border: 1px solid $color-border;
-    background: transparent;
-    color: $color-text;
-}
+    &--full {
+        width: 100%;
+        justify-content: center;
+    }
 
-.btn-danger {
-    background: $color-danger;
-    color: #fff;
+    // Variants
+    &--primary {
+        background: linear-gradient(135deg, $color-primary, $color-primary-dark);
+        color: #fff;
+        border: none;
+        box-shadow: 0 4px 12px rgba($color-primary, 0.3);
+        &:hover {
+            box-shadow: 0 6px 16px rgba($color-primary, 0.45);
+        }
+    }
+
+    &--secondary {
+        background: $color-secondary;
+        color: #fff;
+        border: none;
+        &:hover {
+            opacity: 0.87;
+        }
+    }
+
+    &--outline {
+        background: transparent;
+        border: 1.5px solid $color-border;
+        color: $color-text;
+        &:hover {
+            border-color: $color-primary;
+            color: $color-primary;
+            background: rgba($color-primary, 0.04);
+        }
+    }
+
+    &--danger {
+        background: $color-danger;
+        color: #fff;
+        border: none;
+        &:hover {
+            opacity: 0.87;
+        }
+    }
+
+    &--ghost {
+        background: transparent;
+        border: none;
+        color: $color-muted;
+        box-shadow: none;
+        &:hover {
+            color: $color-primary;
+            background: rgba($color-primary, 0.06);
+        }
+    }
 }

@@ -1,0 +1,216 @@
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.group-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+
+    &__form {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 0.75rem;
+        align-items: end;
+    }
+
+    &__empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 2rem;
+        color: $color-muted;
+
+        svg { font-size: 2.5rem; }
+    }
+
+    // ── Accordion list ─────────────────────────────────────────
+    &__list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    &__item {
+        @include card;
+        overflow: hidden;
+    }
+
+    &__item-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1rem 1.25rem;
+        cursor: pointer;
+        user-select: none;
+        flex-wrap: wrap;
+
+        &:hover { background: rgba($color-primary, 0.03); }
+    }
+
+    &__item-info {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+    }
+
+    &__item-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: $radius-md;
+        background: rgba($color-primary, 0.12);
+        color: $color-primary;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+
+    &__item-code {
+        display: inline-block;
+        margin-left: 0.5rem;
+        font-size: 0.75rem;
+        color: $color-muted;
+        background: rgba($color-muted, 0.1);
+        padding: 0.1rem 0.45rem;
+        border-radius: 999px;
+    }
+
+    &__item-desc {
+        font-size: 0.8rem;
+        color: $color-muted;
+        margin: 0.15rem 0 0;
+    }
+
+    &__item-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-shrink: 0;
+        flex-wrap: wrap;
+
+        svg { color: $color-muted; font-size: 1.1rem; }
+    }
+
+    &__member-count {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.82rem;
+        color: $color-muted;
+    }
+
+    // ── Member list (expanded) ─────────────────────────────────
+    &__member-list {
+        border-top: 1px solid $color-border;
+        padding: 0.75rem 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    &__no-member {
+        font-size: 0.85rem;
+        color: $color-muted;
+        text-align: center;
+        padding: 0.75rem 0;
+    }
+
+    &__member-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.45rem 0.5rem;
+        border-radius: $radius-md;
+
+        &:hover { background: rgba($color-muted, 0.05); }
+    }
+
+    &__avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: rgba($color-primary, 0.12);
+        color: $color-primary;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.82rem;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+
+    &__member-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+    }
+
+    &__member-name {
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: $color-text;
+    }
+
+    &__member-email {
+        font-size: 0.78rem;
+        color: $color-muted;
+    }
+
+    // ── Add member modal ───────────────────────────────────────
+    &__add-modal {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    &__add-input {
+        width: 100%;
+        border: 1.5px solid $color-border;
+        border-radius: $radius-md;
+        padding: 0.55rem 0.85rem;
+        font-size: 0.9rem;
+        font-family: inherit;
+        color: $color-text;
+        background: $color-surface;
+        box-sizing: border-box;
+        transition: border-color 0.15s, box-shadow 0.15s;
+
+        &:focus {
+            outline: none;
+            border-color: $color-primary;
+            box-shadow: 0 0 0 3px rgba($color-primary, 0.12);
+        }
+    }
+
+    &__user-list {
+        max-height: 340px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    &__user-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.5rem 0.6rem;
+        border-radius: $radius-md;
+
+        &:hover { background: rgba($color-primary, 0.04); }
+    }
+
+    // ── Shared ────────────────────────────────────────────────
+    &__add-member {
+        display: flex;
+        gap: 0.5rem;
+        padding: 0.75rem 0 0;
+        border-top: 1px solid $color-border;
+        margin-top: 0.5rem;
+    }
+}

@@ -1,11 +1,165 @@
+@use "sass:color";
+@use "../variables" as *;
 @use "../mixins" as *;
 
 .result-page {
-    @include page-width;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    max-width: 860px;
+    margin: 0 auto;
 }
 
+// ── Score summary ─────────────────────────────────────────────
+
+.result-score {
+    @include card;
+    padding: 2rem;
+    text-align: center;
+    background: linear-gradient(135deg, rgba($color-primary, 0.05), rgba($color-secondary, 0.05));
+
+    &__circle {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        font-size: 2rem;
+        font-weight: 900;
+        font-family: $font-heading;
+    }
+
+    &__circle--pass {
+        background: rgba($color-secondary, 0.14);
+        color: color.adjust($color-secondary, $lightness: -10%);
+        border: 3px solid $color-secondary;
+    }
+
+    &__circle--fail {
+        background: rgba($color-danger, 0.1);
+        color: $color-danger;
+        border: 3px solid $color-danger;
+    }
+
+    &__title {
+        font-size: 1.35rem;
+        margin: 0 0 0.3rem;
+    }
+
+    &__subtitle {
+        font-size: 0.85rem;
+        color: $color-muted;
+        margin: 0;
+    }
+
+    &__stats {
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+        margin-top: 1.25rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid $color-border;
+        flex-wrap: wrap;
+    }
+
+    &__stat-item {
+        text-align: center;
+    }
+
+    &__stat-value {
+        font-size: 1.4rem;
+        font-weight: 800;
+        font-family: $font-heading;
+        line-height: 1;
+        display: block;
+        margin-bottom: 0.3rem;
+
+        &--correct {
+            color: $color-secondary;
+        }
+        &--wrong {
+            color: $color-danger;
+        }
+        &--total {
+            color: $color-primary;
+        }
+    }
+
+    &__stat-label {
+        font-size: 0.75rem;
+        color: $color-muted;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        display: block;
+    }
+}
+
+// ── Review list ───────────────────────────────────────────────
+
 .review-list {
-    display: grid;
-    gap: 0.8rem;
-    margin-top: 0.8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.review-card {
+    @include card;
+    padding: 1.1rem 1.25rem;
+
+    &__question {
+        font-size: 0.92rem;
+        font-weight: 600;
+        color: $color-text;
+        margin: 0 0 0.75rem;
+        line-height: 1.5;
+    }
+
+    &__answer-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.3rem 0;
+        font-size: 0.85rem;
+    }
+
+    &__label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: $color-muted;
+        min-width: 72px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    &__value {
+        color: $color-text;
+    }
+
+    &__verdict {
+        margin-top: 0.65rem;
+        font-size: 0.82rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+
+        &--correct {
+            color: $color-secondary;
+        }
+        &--wrong {
+            color: $color-danger;
+        }
+    }
+
+    &__explanation {
+        margin-top: 0.6rem;
+        padding: 0.55rem 0.85rem;
+        background: rgba($color-primary, 0.06);
+        border-left: 3px solid $color-primary;
+        border-radius: 0 $radius-md $radius-md 0;
+        font-size: 0.82rem;
+        color: $color-text;
+    }
 }

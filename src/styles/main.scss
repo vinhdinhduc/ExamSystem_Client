@@ -3,10 +3,27 @@
 
 @use "./base/reset";
 @use "./base/base";
+
+// UI components
 @use "./components/button";
 @use "./components/card";
+@use "./components/badge";
+@use "./components/modal";
+@use "./components/form-field";
+@use "./components/pagination";
+@use "./components/select";
+@use "./components/table";
+@use "./components/exam-components";
+
+// Layout
 @use "./layout/app-layout";
+
+// Pages
 @use "./pages/login";
 @use "./pages/dashboard";
 @use "./pages/exam";
 @use "./pages/result";
+@use "./pages/group";
+@use "./pages/admin";
+@use "./pages/user-management";
+@use "./pages/profile";
