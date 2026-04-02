@@ -30,7 +30,6 @@ const VerifyEmailPage = () => {
     }
   };
 
-  // Tự động verify nếu có token trên URL
   useEffect(() => {
     const token = searchParams.get("token");
     if (token) {
@@ -60,9 +59,13 @@ const VerifyEmailPage = () => {
         )}
 
         {status === "success" && (
-          <div className="auth-status-wrap">
-            <p className="auth-status auth-status--success">✓ {message}</p>
-            <Link to="/login" className="muted-link auth-link-block">
+          <div style={{ textAlign: "center" }}>
+            <p style={{ color: "#16a34a", fontWeight: 600 }}>✓ {message}</p>
+            <Link
+              to="/login"
+              className="muted-link"
+              style={{ marginTop: 16, display: "block" }}
+            >
               Đăng nhập ngay
             </Link>
           </div>
@@ -76,8 +79,8 @@ const VerifyEmailPage = () => {
 
         {/* Form nhập token thủ công — hiện khi chưa verify hoặc bị lỗi */}
         {(status === "idle" || status === "error") && (
-          <form onSubmit={handleManualSubmit} className="auth-manual-form">
-            <p className="auth-manual-hint">
+          <form onSubmit={handleManualSubmit} style={{ marginTop: 16 }}>
+            <p style={{ fontSize: 14, color: "#6b7280" }}>
               Nếu không click được link trong email, hãy copy token từ link và
               dán vào đây:
             </p>
@@ -89,13 +92,22 @@ const VerifyEmailPage = () => {
               placeholder="Dán token từ link email vào đây"
               required
             />
-            <Button type="submit" fullWidth disabled={submitting}>
+            <Button
+              type="submit"
+              fullWidth
+              disabled={submitting}
+              style={{ marginTop: 8 }}
+            >
               {submitting ? "Đang xác thực..." : "Xác thực"}
             </Button>
           </form>
         )}
 
-        <Link to="/login" className="muted-link auth-link-block">
+        <Link
+          to="/login"
+          className="muted-link"
+          style={{ marginTop: 16, display: "block" }}
+        >
           Quay lại đăng nhập
         </Link>
       </div>
