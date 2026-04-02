@@ -8,6 +8,7 @@ export interface RegisterRequest {
     password: string
     username?: string
     fullName?: string
+    confirmPassword?: string
 }
 // User info trả về từ BE (UserInfoDto)
 export interface UserInfo {

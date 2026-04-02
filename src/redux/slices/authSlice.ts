@@ -20,7 +20,8 @@ export const login = createAsyncThunk<
 >('auth/login', async (payload, thunkApi) => {
     try {
         const data = await authService.login(payload)
-        return { token: data.accessToken, refreshToken: data.refreshToken, user: data.user }
+        // BE trả về token dạng access_token/refresh_token
+        return { token: data.access_token, refreshToken: data.refresh_token, user: data.user }
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Đăng nhập thất bại'
         return thunkApi.rejectWithValue(message)
@@ -103,7 +104,8 @@ export const refreshToken = createAsyncThunk<
 >('auth/refreshToken', async (_, thunkApi) => {
     try {
         const data = await authService.refreshToken()
-        return { token: data.accessToken, refreshToken: data.refreshToken, user: data.user }
+        // BE trả về token dạng access_token/refresh_token
+        return { token: data.access_token, refreshToken: data.refresh_token, user: data.user }
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Phiên đăng nhập hết hạn'
         return thunkApi.rejectWithValue(message)
