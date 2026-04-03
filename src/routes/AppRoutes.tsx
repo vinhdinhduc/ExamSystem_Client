@@ -29,6 +29,7 @@ import QuestionManagementPage from "../pages/QuestionManagement/QuestionManageme
 import RolesPermissionsPage from "../pages/Admin/RolesPermissionsPage";
 import UserManagementPage from "../pages/UserManagement/UserManagementPage";
 import ProfilePage from "../pages/Profile/ProfilePage";
+import ExamPauseApprovalsPage from "../pages/ExamPause/ExamPauseApprovalsPage";
 import ProtectedRoute from "../components/common/ProtectedRoute";
 
 const DoExamRouteElement = () => {
@@ -79,6 +80,7 @@ const AppRoutes = () => {
             <Route path="/exams/:id/preview" element={<ExamPreviewPage />} />
             <Route path="/questions" element={<QuestionManagementPage />} />
             <Route path="/groups" element={<GroupManagementPage />} />
+            <Route path="/exam-pauses" element={<ExamPauseApprovalsPage />} />
           </Route>
         </Route>
       </Route>

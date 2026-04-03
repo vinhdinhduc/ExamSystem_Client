@@ -3,6 +3,19 @@ import { examSessionService } from '../../api/services/examSessionService'
 import type { ExamSessionState, StartExamResponse, SubmitExamResult } from '../../types/examSession'
 import type { RootState } from '../store'
 
+/** Giống DoExamPage: ISO không offset → UTC để khớp server DateTime.UtcNow. */
+const remainingSecondsFromExpiresIso = (iso: string): number => {
+    let normalized = iso.trim()
+    if (!/[zZ]$/.test(normalized) && !/[+-]\d{2}:?\d{2}$/.test(normalized)) {
+        normalized = `${normalized}Z`
+    }
+    const endMs = new Date(normalized).getTime()
+    if (!Number.isFinite(endMs)) {
+        return 0
+    }
+    return Math.max(0, Math.floor((endMs - Date.now()) / 1000))
+}
+
 const initialState: ExamSessionState = {
     starting: false,
     sessionId: null,
@@ -80,6 +93,15 @@ const examSessionSlice = createSlice({
         setRemainingTime: (state, action: PayloadAction<number>) => {
             state.remainingTime = action.payload
         },
+        /** Đồng bộ hạn nộp + giây còn lại từ API (poll / gia hạn sau tạm dừng). */
+        syncTimerFromServer: (
+            state,
+            action: PayloadAction<{ expiresAt: string; remainingSeconds: number }>,
+        ) => {
+            state.expiresAt = action.payload.expiresAt
+            const sec = action.payload.remainingSeconds
+            state.remainingTime = Number.isFinite(sec) ? Math.max(0, Math.floor(sec)) : 0
+        },
         setCurrentQuestion: (state, action: PayloadAction<number>) => {
             state.currentQuestion = action.payload
         },
@@ -128,9 +150,7 @@ const examSessionSlice = createSlice({
                     },
                     {},
                 )
-                const expiresAtTs = new Date(action.payload.expiresAt).getTime()
-                const nowTs = Date.now()
-                state.remainingTime = Math.max(0, Math.floor((expiresAtTs - nowTs) / 1000))
+                state.remainingTime = remainingSecondsFromExpiresIso(action.payload.expiresAt)
                 state.currentQuestion = 0
             })
             .addCase(startExamSession.rejected, (state, action) => {
@@ -162,6 +182,11 @@ const examSessionSlice = createSlice({
     },
 })
 
-export const { setRemainingTime, setCurrentQuestion, setSessionAnswer, clearSessionState } =
-    examSessionSlice.actions
+export const {
+    setRemainingTime,
+    syncTimerFromServer,
+    setCurrentQuestion,
+    setSessionAnswer,
+    clearSessionState,
+} = examSessionSlice.actions
 export default examSessionSlice.reducer

@@ -57,6 +57,65 @@ export interface SubmitExamResult {
     status: number
 }
 
+/** Trạng thái 4 = tạm dừng sự cố chờ quản trị viên (PAUSED_SYSTEM + WAITING_ADMIN_APPROVAL). */
+export const SESSION_STATUS_PAUSED_SYSTEM = 4
+
+export type SystemInterruptionType =
+    | 'NETWORK_LOSS'
+    | 'PAGE_RELOAD'
+    | 'HEARTBEAT_TIMEOUT'
+    | 'CRASH_OR_UNKNOWN'
+
+export interface SystemInterruptionRequest {
+    sessionId: string
+    userId?: string
+    type: SystemInterruptionType
+    currentQuestionIndex?: number
+}
+
+export interface SystemInterruptionResponse {
+    sessionId: string
+    status: number
+    systemPauseReason?: string | null
+    systemPausedAt?: string | null
+}
+
+export interface SessionRuntimeStatus {
+    sessionId: string
+    status: number
+    systemPauseReason?: string | null
+    systemPausedAt?: string | null
+    expiresAt: string
+    currentQuestionIndex: number
+    violationCount: number
+}
+
+export interface PendingSystemPauseItem {
+    sessionId: string
+    examId: string
+    examTitle: string
+    userId: string
+    studentFullName: string
+    studentEmail?: string | null
+    systemPauseReason?: string | null
+    systemPausedAt?: string | null
+    expiresAt: string
+    currentQuestionIndex: number
+    violationCount: number
+}
+
+export type AdminPauseDecision = 'RESUME' | 'SUBMIT' | 'DISQUALIFY'
+
+export interface AdminResolvePauseRequest {
+    decision: AdminPauseDecision
+}
+
+export interface AdminResolvePauseResult {
+    sessionId: string
+    status: number
+    submittedAt?: string | null
+}
+
 export interface ExamSessionReviewOption {
     id: number
     content: string

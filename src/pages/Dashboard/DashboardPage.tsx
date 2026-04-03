@@ -15,6 +15,7 @@ import LoadingSpinner from "../../components/common/LoadingSpinner";
 import { useAppDispatch, useAppSelector } from "../../hooks/reduxHooks";
 import { fetchAssignedExams } from "../../redux/slices/examSlice";
 import type { RootState } from "../../redux/store";
+import type { StudentAssignedExam } from "../../types/exam";
 import {
   formatDateTime,
   formatDuration,
@@ -35,18 +36,32 @@ const DashboardPage = () => {
     void dispatch(fetchAssignedExams());
   }, [dispatch]);
 
+  const uniqueAssignedExams = useMemo(() => {
+    const byExamId = new Map<string, StudentAssignedExam>();
+    for (const row of assignedExams) {
+      const prev = byExamId.get(row.examId);
+      if (
+        !prev ||
+        new Date(row.assignedAt).getTime() >= new Date(prev.assignedAt).getTime()
+      ) {
+        byExamId.set(row.examId, row);
+      }
+    }
+    return Array.from(byExamId.values());
+  }, [assignedExams]);
+
   const { upcoming, doing, completed } = useMemo(() => {
-    const upcoming = assignedExams.filter(
+    const upcoming = uniqueAssignedExams.filter(
       (e) => getAssignmentBucket(e) === "upcoming",
     );
-    const doing = assignedExams.filter(
+    const doing = uniqueAssignedExams.filter(
       (e) => getAssignmentBucket(e) === "doing",
     );
-    const completed = assignedExams.filter(
+    const completed = uniqueAssignedExams.filter(
       (e) => getAssignmentBucket(e) === "completed",
     );
     return { upcoming, doing, completed };
-  }, [assignedExams]);
+  }, [uniqueAssignedExams]);
 
   if (loading) return <LoadingSpinner />;
 
@@ -73,7 +88,7 @@ const DashboardPage = () => {
           </div>
           <div className="stat-card__body">
             <span className="stat-card__label">Tổng đề được giao</span>
-            <span className="stat-card__value">{assignedExams.length}</span>
+            <span className="stat-card__value">{uniqueAssignedExams.length}</span>
           </div>
         </div>
         <div className="stat-card">
@@ -192,7 +207,7 @@ const DashboardPage = () => {
       )}
 
       {/* Empty state */}
-      {assignedExams.length === 0 && !loading && (
+      {uniqueAssignedExams.length === 0 && !loading && (
         <Card>
           <div className="dashboard-empty">
             <IoSchoolOutline />

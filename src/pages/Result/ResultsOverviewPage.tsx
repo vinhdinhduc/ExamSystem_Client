@@ -16,6 +16,7 @@ import type {
   TeacherAssignedExamResultItem,
 } from "../../types/result";
 import { formatDateTime } from "../../utils/examUi";
+import { storage } from "../../utils/storage";
 
 const normalizeRoleName = (role: unknown): string | null => {
   if (typeof role === "string") return role.toLowerCase();
@@ -135,6 +136,8 @@ const ResultsOverviewPage = () => {
 
     const setupRealtime = async () => {
       try {
+        if (!storage.getToken()) return;
+
         await examMonitoringHub.connect();
 
         if (selectedExamId) {

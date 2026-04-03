@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   IoAlbumsOutline,
+  IoAlertCircleOutline,
   IoBarChartOutline,
   IoBookOutline,
   IoGridOutline,
@@ -79,6 +80,14 @@ const AppLayout = () => {
         to: "/results",
         label: "Kết quả đã làm",
         icon: <IoBarChartOutline />,
+      });
+    }
+
+    if (isTeacher || isAdmin) {
+      items.push({
+        to: "/exam-pauses",
+        label: "Xử lý sự cố thi",
+        icon: <IoAlertCircleOutline />,
       });
     }
 

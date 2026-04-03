@@ -7,6 +7,12 @@ import type {
     SaveProgressResponse,
     ExamViolationRequest,
     ExamViolationResponse,
+    SystemInterruptionRequest,
+    SystemInterruptionResponse,
+    SessionRuntimeStatus,
+    PendingSystemPauseItem,
+    AdminResolvePauseRequest,
+    AdminResolvePauseResult,
 } from '../../types/examSession'
 import type { ApiResponse } from '../../types/api'
 
@@ -65,6 +71,38 @@ export const examSessionService = {
         const response = await axiosClient.get<
             ApiResponse<ExamSessionReviewResult> | ExamSessionReviewResult
         >(`/exam-sessions/${sessionId}/review`)
+        return unwrapApiData(response.data)
+    },
+    reportSystemInterruption: async (
+        payload: SystemInterruptionRequest,
+    ): Promise<SystemInterruptionResponse> => {
+        const response = await axiosClient.post<
+            ApiResponse<SystemInterruptionResponse> | SystemInterruptionResponse
+        >('/exam/system-interruption', payload)
+        return unwrapApiData(response.data)
+    },
+    sendHeartbeat: async (payload: { sessionId: string; userId?: string }): Promise<void> => {
+        await axiosClient.post('/exam/heartbeat', payload)
+    },
+    getSessionRuntimeStatus: async (sessionId: string): Promise<SessionRuntimeStatus> => {
+        const response = await axiosClient.get<
+            ApiResponse<SessionRuntimeStatus> | SessionRuntimeStatus
+        >(`/exam/session-runtime/${sessionId}`)
+        return unwrapApiData(response.data)
+    },
+    getPendingSystemPauses: async (): Promise<PendingSystemPauseItem[]> => {
+        const response = await axiosClient.get<
+            ApiResponse<PendingSystemPauseItem[]> | PendingSystemPauseItem[]
+        >('/exam-sessions/pending-system-pauses')
+        return unwrapApiData(response.data)
+    },
+    resolveSystemPause: async (
+        sessionId: string,
+        payload: AdminResolvePauseRequest,
+    ): Promise<AdminResolvePauseResult> => {
+        const response = await axiosClient.post<
+            ApiResponse<AdminResolvePauseResult> | AdminResolvePauseResult
+        >(`/exam-sessions/${sessionId}/resolve-system-pause`, payload)
         return unwrapApiData(response.data)
     },
 }

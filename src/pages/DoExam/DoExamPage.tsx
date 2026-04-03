@@ -4,6 +4,7 @@ import {
   IoArrowForwardOutline,
   IoCheckmarkCircleOutline,
 } from "react-icons/io5";
+import { isAxiosError } from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { examSessionService } from "../../api/services/examSessionService";
@@ -22,13 +23,38 @@ import {
   setRemainingTime,
   setSessionAnswer,
   startExamSession,
+  syncTimerFromServer,
 } from "../../redux/slices/examSessionSlice";
 import { fetchQuestionsByExamId } from "../../redux/slices/questionSlice";
 import type { RootState } from "../../redux/store";
-import type { ExamViolationRequest } from "../../types/examSession";
+import type {
+  ExamViolationRequest,
+  SystemInterruptionType,
+} from "../../types/examSession";
 import { formatDateTime, normalizeExamStatus } from "../../utils/examUi";
 
 const MAX_VIOLATIONS = 3;
+
+/** Parse hạn nộp từ API: chuỗi không có Z/offset thì coi là UTC (tránh trình duyệt hiểu nhầm giờ địa phương → còn 0 giây). */
+const remainingSecondsFromExpiresIso = (
+  iso: string | null | undefined,
+): number | null => {
+  if (!iso) {
+    return null;
+  }
+  let normalized = iso.trim();
+  if (
+    !/[zZ]$/.test(normalized) &&
+    !/[+-]\d{2}:?\d{2}$/.test(normalized)
+  ) {
+    normalized = `${normalized}Z`;
+  }
+  const endMs = new Date(normalized).getTime();
+  if (!Number.isFinite(endMs)) {
+    return null;
+  }
+  return Math.max(0, Math.floor((endMs - Date.now()) / 1000));
+};
 
 const DoExamPage = () => {
   const { id = "" } = useParams();
@@ -46,6 +72,7 @@ const DoExamPage = () => {
     answers,
     currentQuestion,
     remainingTime,
+    expiresAt: sessionExpiresAt,
     questionOrder,
     questionAnswerOrder,
     error,
@@ -55,7 +82,10 @@ const DoExamPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFullscreenEnabled, setIsFullscreenEnabled] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
-  const [isPaused, setIsPaused] = useState(false);
+  /** Chờ quản trị viên sau khi báo sự cố mềm (mạng / reload / …) */
+  const [serverWaitingAdmin, setServerWaitingAdmin] = useState(false);
+  /** Đang gửi báo cáo reload lên server */
+  const [reloadReporting, setReloadReporting] = useState(false);
   const [localViolationCount, setLocalViolationCount] = useState(0);
 
   const hasAutoSubmitted = useRef(false);
@@ -63,8 +93,19 @@ const DoExamPage = () => {
   const saveProgressDebounce = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  const reloadReportSentRef = useRef(false);
+  const prevRuntimeStatusRef = useRef<number | null>(null);
+  /** Sau khi admin cho tiếp tục: bỏ qua ghi nhận vi phạm anticheat một lúc (tránh tab/fullscreen do vào lại bài). */
+  const resumeAnticheatGraceUntilRef = useRef(0);
+  /** Hết giờ chỉ kích hoạt nộp một lần (Strict Mode / re-render không spam submit). */
+  const timerExpireSubmitOnceRef = useRef(false);
+  /** Theo dõi vừa rồi có đang fullscreen không (tránh stale closure khi báo EXIT_FULLSCREEN). */
+  const hadFullscreenRef = useRef(false);
 
   const pauseStorageKey = useMemo(() => `exam-paused-${id}`, [id]);
+
+  const examBlocked =
+    isOffline || serverWaitingAdmin || reloadReporting;
 
   const scheduleBlockMessage = useMemo(() => {
     if (!examDetail || examDetail.id !== id) {
@@ -124,25 +165,32 @@ const DoExamPage = () => {
 
   const currentQ = orderedQuestions[currentQuestion] ?? null;
 
-  const enableFullscreen = useCallback(async () => {
-    if (document.fullscreenElement) {
-      setIsFullscreenEnabled(true);
-      return;
-    }
-
-    try {
-      const elem = document.documentElement as HTMLElement;
-      if (elem.requestFullscreen) {
-        await elem.requestFullscreen();
+  /** requestFullscreen chỉ tin cậy sau tương tác người dùng; gọi từ useEffect sẽ bị từ chối → không toast trừ khi warnOnFailure. */
+  const enableFullscreen = useCallback(
+    async (options?: { warnOnFailure?: boolean }) => {
+      const warnOnFailure = options?.warnOnFailure ?? false;
+      if (document.fullscreenElement) {
         setIsFullscreenEnabled(true);
+        return;
       }
-    } catch {
-      setIsFullscreenEnabled(false);
-      toast.warn(
-        "Trình duyệt từ chối fullscreen. Vui lòng cho phép để tiếp tục làm bài.",
-      );
-    }
-  }, []);
+
+      try {
+        const elem = document.documentElement as HTMLElement;
+        if (elem.requestFullscreen) {
+          await elem.requestFullscreen();
+          setIsFullscreenEnabled(true);
+        }
+      } catch {
+        setIsFullscreenEnabled(false);
+        if (warnOnFailure) {
+          toast.warn(
+            "Trình duyệt từ chối fullscreen. Vui lòng cho phép để tiếp tục làm bài.",
+          );
+        }
+      }
+    },
+    [],
+  );
 
   const safeExitFullscreen = useCallback(async () => {
     if (!document.fullscreenElement) return;
@@ -155,6 +203,34 @@ const DoExamPage = () => {
       setIsFullscreenEnabled(false);
     }
   }, []);
+
+  const reportSoftInterruption = useCallback(
+    async (type: SystemInterruptionType) => {
+      if (!sessionId || hasAutoSubmitted.current) {
+        return;
+      }
+
+      try {
+        await examSessionService.reportSystemInterruption({
+          sessionId,
+          userId: user?.id,
+          type,
+          currentQuestionIndex: currentQuestion,
+        });
+        setServerWaitingAdmin(true);
+        const pendingKey = `exam-interrupt-pending-${sessionId}`;
+        sessionStorage.removeItem(pendingKey);
+      } catch {
+        if (sessionId) {
+          sessionStorage.setItem(
+            `exam-interrupt-pending-${sessionId}`,
+            type,
+          );
+        }
+      }
+    },
+    [currentQuestion, sessionId, user?.id],
+  );
 
   const handleSubmit = useCallback(async () => {
     if (!sessionId || hasAutoSubmitted.current || isSubmitting) {
@@ -189,19 +265,44 @@ const DoExamPage = () => {
           },
         },
       });
-    } catch {
+    } catch (err: unknown) {
       hasAutoSubmitted.current = false;
       setIsSubmitting(false);
-      toast.error("Không thể nộp bài, vui lòng thử lại.");
-      if (!isPaused && !isOffline) {
+
+      let apiMessage: string | null = null;
+      if (isAxiosError(err)) {
+        const data = err.response?.data as
+          | { message?: string; error?: { reason?: string } }
+          | undefined;
+        apiMessage = data?.message ?? data?.error?.reason ?? null;
+      } else if (err instanceof Error) {
+        apiMessage = err.message;
+      }
+
+      const pauseLike =
+        Boolean(apiMessage) &&
+        (apiMessage!.includes("tạm dừng") ||
+          apiMessage!.includes("quản trị viên"));
+
+      if (pauseLike) {
+        setServerWaitingAdmin(true);
+        toast.warn(
+          apiMessage ??
+            "Phiên thi đang tạm dừng chờ quản trị viên. Chưa thể nộp bài cho đến khi được xử lý.",
+        );
+      } else {
+        toast.error(apiMessage || "Không thể nộp bài, vui lòng thử lại.");
+      }
+
+      if (!examBlocked && !isOffline) {
         void enableFullscreen();
       }
     }
   }, [
     enableFullscreen,
+    examBlocked,
     examDetail?.title,
     isOffline,
-    isPaused,
     isSubmitting,
     navigate,
     orderedQuestions.length,
@@ -211,14 +312,35 @@ const DoExamPage = () => {
     user?.id,
   ]);
 
+  const handleExamTimerExpire = useCallback(() => {
+    if (timerExpireSubmitOnceRef.current) {
+      return;
+    }
+    timerExpireSubmitOnceRef.current = true;
+    if (examBlocked) {
+      toast.info(
+        "Đã hết thời gian làm bài. Phiên đang tạm dừng — vui lòng chờ quản trị viên xử lý hoặc dùng Nộp bài khi được phép.",
+      );
+      return;
+    }
+    void handleSubmit();
+  }, [examBlocked, handleSubmit]);
+
   const reportViolation = useCallback(
     async (type: ExamViolationRequest["type"]) => {
-      if (!sessionId || hasAutoSubmitted.current) {
+      if (
+        !sessionId ||
+        hasAutoSubmitted.current ||
+        isOffline ||
+        serverWaitingAdmin ||
+        reloadReporting
+      ) {
         return;
       }
 
-      const fallbackCount = localViolationCount + 1;
-      setLocalViolationCount(fallbackCount);
+      if (Date.now() < resumeAnticheatGraceUntilRef.current) {
+        return;
+      }
 
       try {
         const payload = await examSessionService.reportViolation({
@@ -230,6 +352,11 @@ const DoExamPage = () => {
 
         const count = payload.violationCount;
         setLocalViolationCount(count);
+
+        if (payload.status === 4) {
+          setServerWaitingAdmin(true);
+          return;
+        }
 
         if (
           payload.isForceSubmitted ||
@@ -245,25 +372,35 @@ const DoExamPage = () => {
 
         toast.warn(`Vi phạm quy định làm bài: ${count}/${MAX_VIOLATIONS}.`);
       } catch {
-        if (fallbackCount >= MAX_VIOLATIONS) {
-          toast.error(
-            "Bạn đã vi phạm quá số lần cho phép. Hệ thống sẽ tự động nộp bài.",
-          );
-          void handleSubmit();
-          return;
+        // Lỗi mạng / phiên tạm dừng: không tăng vi phạm cục bộ, không tự nộp (tránh coi sự cố mạng như gian lận).
+        try {
+          const s = await examSessionService.getSessionRuntimeStatus(sessionId);
+          setLocalViolationCount(s.violationCount);
+          if (s.status === 4) {
+            setServerWaitingAdmin(true);
+          }
+        } catch {
+          // Bỏ qua — poll định kỳ sẽ đồng bộ.
         }
-
         toast.warn(
-          `Vi phạm quy định làm bài: ${fallbackCount}/${MAX_VIOLATIONS}.`,
+          "Không ghi nhận vi phạm do lỗi kết nối hoặc phiên đang tạm dừng. Hệ thống sẽ đồng bộ khi có mạng.",
         );
       }
     },
-    [currentQuestion, handleSubmit, localViolationCount, sessionId, user?.id],
+    [
+      currentQuestion,
+      handleSubmit,
+      isOffline,
+      reloadReporting,
+      serverWaitingAdmin,
+      sessionId,
+      user?.id,
+    ],
   );
 
   const saveProgress = useCallback(
     async (questionId: string, selectedIds: number[]) => {
-      if (!sessionId || isOffline || isPaused || hasAutoSubmitted.current) {
+      if (!sessionId || isOffline || examBlocked || hasAutoSubmitted.current) {
         return;
       }
 
@@ -292,13 +429,13 @@ const DoExamPage = () => {
         // Skip hard-fail: next change will retry save-progress.
       }
     },
-    [currentQuestion, handleSubmit, isOffline, isPaused, sessionId, user?.id],
+    [currentQuestion, examBlocked, handleSubmit, isOffline, sessionId, user?.id],
   );
 
   const handleAnswer = useCallback(
     (questionId: string, selectedIds: number[]) => {
-      if (isPaused || isOffline || isSubmitting) {
-        toast.info("Bài thi đang tạm dừng. Vui lòng tiếp tục để trả lời.");
+      if (examBlocked || isOffline || isSubmitting) {
+        toast.info("Bài thi đang tạm dừng. Vui lòng chờ quản trị viên hoặc kết nối mạng.");
         return;
       }
 
@@ -312,11 +449,11 @@ const DoExamPage = () => {
         void saveProgress(questionId, selectedIds);
       }, 800);
     },
-    [dispatch, isOffline, isPaused, isSubmitting, saveProgress],
+    [dispatch, examBlocked, isOffline, isSubmitting, saveProgress],
   );
 
   useEffect(() => {
-    if (!currentQ || isOffline || isPaused || isSubmitting) {
+    if (!currentQ || isOffline || examBlocked || isSubmitting) {
       return;
     }
 
@@ -327,7 +464,7 @@ const DoExamPage = () => {
     saveProgressDebounce.current = setTimeout(() => {
       void saveProgress(currentQ.id, answers[currentQ.id] ?? []);
     }, 600);
-  }, [answers, currentQ, isOffline, isPaused, isSubmitting, saveProgress]);
+  }, [answers, currentQ, examBlocked, isOffline, isSubmitting, saveProgress]);
 
   useEffect(() => {
     if (!id) {
@@ -337,6 +474,9 @@ const DoExamPage = () => {
     hasAutoSubmitted.current = false;
     hasAttemptedStartRef.current = false;
     setLocalViolationCount(0);
+    reloadReportSentRef.current = false;
+    prevRuntimeStatusRef.current = null;
+    timerExpireSubmitOnceRef.current = false;
 
     void dispatch(fetchExamById(id));
     void dispatch(fetchQuestionsByExamId(id));
@@ -377,27 +517,157 @@ const DoExamPage = () => {
   ]);
 
   useEffect(() => {
-    if (!sessionId) {
+    if (!sessionId || hasAutoSubmitted.current) {
+      return;
+    }
+
+    const tick = async () => {
+      try {
+        const s = await examSessionService.getSessionRuntimeStatus(sessionId);
+        const st = Number(
+          s.status ?? (s as { status?: number; Status?: number }).Status,
+        );
+        setServerWaitingAdmin(st === 4);
+        setLocalViolationCount(s.violationCount);
+        // Đồng bộ hạn nộp + giây còn lại (sau tạm dừng / gia hạn; cập nhật cả expiresAt trong Redux).
+        const expiresIso =
+          s.expiresAt ??
+          (s as { expiresAt?: string; ExpiresAt?: string }).ExpiresAt;
+        if (st === 0 && expiresIso) {
+          const secs = remainingSecondsFromExpiresIso(expiresIso);
+          if (secs !== null) {
+            if (secs > 0) {
+              timerExpireSubmitOnceRef.current = false;
+            }
+            dispatch(
+              syncTimerFromServer({
+                expiresAt: expiresIso,
+                remainingSeconds: secs,
+              }),
+            );
+          }
+        }
+        if (prevRuntimeStatusRef.current === 4 && st === 0) {
+          toast.success("Quản trị viên đã cho phép tiếp tục làm bài.");
+          resumeAnticheatGraceUntilRef.current = Date.now() + 60_000;
+          timerExpireSubmitOnceRef.current = false;
+          void enableFullscreen();
+        }
+        prevRuntimeStatusRef.current = st;
+      } catch {
+        // Bỏ qua lỗi mạng khi poll.
+      }
+    };
+
+    void tick();
+    const intervalId = window.setInterval(() => void tick(), 2000);
+    return () => window.clearInterval(intervalId);
+  }, [dispatch, enableFullscreen, sessionId]);
+
+  // remainingTime kẹt 0 nhưng hạn nộp trong Redux vẫn còn (race start / parse ngày / lỗi tạm thời) → bật lại đếm.
+  useEffect(() => {
+    if (!sessionId || hasAutoSubmitted.current || examBlocked) {
+      return;
+    }
+    if (remainingTime > 0) {
+      return;
+    }
+    const secs = remainingSecondsFromExpiresIso(sessionExpiresAt);
+    if (secs === null || secs <= 0) {
+      return;
+    }
+    timerExpireSubmitOnceRef.current = false;
+    dispatch(setRemainingTime(secs));
+  }, [
+    dispatch,
+    examBlocked,
+    remainingTime,
+    sessionExpiresAt,
+    sessionId,
+  ]);
+
+  useEffect(() => {
+    if (!sessionId || hasAutoSubmitted.current || examBlocked) {
+      return;
+    }
+
+    const send = () => {
+      void examSessionService.sendHeartbeat({
+        sessionId,
+        userId: user?.id,
+      });
+    };
+
+    send();
+    const intervalId = window.setInterval(send, 30_000);
+    return () => window.clearInterval(intervalId);
+  }, [examBlocked, sessionId, user?.id]);
+
+  useEffect(() => {
+    if (!sessionId || navigator.onLine) {
+      return;
+    }
+    void reportSoftInterruption("NETWORK_LOSS");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (!sessionId || reloadReportSentRef.current) {
       return;
     }
 
     const wasPausedByReload = sessionStorage.getItem(pauseStorageKey) === "1";
-    if (wasPausedByReload) {
-      setIsPaused(true);
-      toast.info("Bài thi đã được tạm dừng sau khi tải lại trang.");
+    if (!wasPausedByReload) {
+      return;
     }
-  }, [pauseStorageKey, sessionId]);
+
+    reloadReportSentRef.current = true;
+    setReloadReporting(true);
+    void (async () => {
+      try {
+        await examSessionService.reportSystemInterruption({
+          sessionId,
+          userId: user?.id,
+          type: "PAGE_RELOAD",
+          currentQuestionIndex: currentQuestion,
+        });
+        sessionStorage.removeItem(pauseStorageKey);
+        setServerWaitingAdmin(true);
+        toast.info(
+          "Đã báo tải lại trang. Phiên thi tạm dừng chờ quản trị viên xử lý.",
+        );
+      } catch {
+        toast.warn("Không thể đồng bộ trạng thái reload. Sẽ thử lại khi có mạng.");
+      } finally {
+        setReloadReporting(false);
+      }
+    })();
+  }, [currentQuestion, pauseStorageKey, sessionId, user?.id]);
 
   useEffect(() => {
     const handleOnline = () => {
       setIsOffline(false);
-      toast.success("Đã có kết nối mạng. Bạn có thể tiếp tục làm bài.");
+      if (!sessionId) {
+        toast.success("Đã có kết nối mạng.");
+        return;
+      }
+
+      const pending = sessionStorage.getItem(
+        `exam-interrupt-pending-${sessionId}`,
+      );
+      if (pending === "NETWORK_LOSS" || pending === "PAGE_RELOAD") {
+        sessionStorage.removeItem(`exam-interrupt-pending-${sessionId}`);
+        void reportSoftInterruption(pending as SystemInterruptionType);
+        return;
+      }
+
+      toast.success("Đã có kết nối mạng.");
     };
 
     const handleOffline = () => {
       setIsOffline(true);
-      setIsPaused(true);
-      toast.warn("Mất kết nối mạng. Bài thi đã tạm dừng.");
+      void reportSoftInterruption("NETWORK_LOSS");
+      toast.warn("Mất kết nối mạng. Phiên thi tạm dừng chờ quản trị viên xử lý.");
     };
 
     window.addEventListener("online", handleOnline);
@@ -407,7 +677,7 @@ const DoExamPage = () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, []);
+  }, [reportSoftInterruption, sessionId]);
 
   useEffect(() => {
     if (!sessionId || hasAutoSubmitted.current) {
@@ -427,11 +697,14 @@ const DoExamPage = () => {
   }, [pauseStorageKey, sessionId]);
 
   useEffect(() => {
-    if (!sessionId || isPaused || isOffline || hasAutoSubmitted.current) {
+    if (!sessionId || examBlocked || isOffline || hasAutoSubmitted.current) {
       return;
     }
 
-    void enableFullscreen();
+    // Không gọi requestFullscreen ở đây: trình duyệt yêu cầu cử chỉ người dùng (click) mới cho phép.
+    const fsNow = Boolean(document.fullscreenElement);
+    setIsFullscreenEnabled(fsNow);
+    hadFullscreenRef.current = fsNow;
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
@@ -440,10 +713,13 @@ const DoExamPage = () => {
     };
 
     const handleFullscreenChange = () => {
-      if (!document.fullscreenElement && isFullscreenEnabled) {
+      const nowFs = Boolean(document.fullscreenElement);
+      setIsFullscreenEnabled(nowFs);
+      if (!nowFs && hadFullscreenRef.current) {
         void reportViolation("EXIT_FULLSCREEN");
         void enableFullscreen();
       }
+      hadFullscreenRef.current = nowFs;
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -501,14 +777,7 @@ const DoExamPage = () => {
       document.removeEventListener("copy", handleCopy);
       document.removeEventListener("paste", handlePaste);
     };
-  }, [
-    enableFullscreen,
-    isFullscreenEnabled,
-    isOffline,
-    isPaused,
-    reportViolation,
-    sessionId,
-  ]);
+  }, [enableFullscreen, examBlocked, isOffline, reportViolation, sessionId]);
 
   const handleRetryStartSession = () => {
     if (!id) return;
@@ -516,17 +785,6 @@ const DoExamPage = () => {
     void dispatch(
       startExamSession({ examId: id, userId: user?.id, accessCode: null }),
     );
-  };
-
-  const handleResumeExam = async () => {
-    if (!sessionId || isOffline) {
-      toast.warn("Không thể tiếp tục khi đang mất mạng.");
-      return;
-    }
-
-    setIsPaused(false);
-    sessionStorage.removeItem(pauseStorageKey);
-    await enableFullscreen();
   };
 
   const handleManualSubmit = () => {
@@ -571,23 +829,42 @@ const DoExamPage = () => {
     );
   }
 
+  const showFullscreenPrompt =
+    Boolean(sessionId) &&
+    !examBlocked &&
+    !isOffline &&
+    !isFullscreenEnabled;
+
   return (
     <div className="do-exam">
-      {(isOffline || isPaused) && (
+      {showFullscreenPrompt && (
+        <Card className="do-exam__fullscreen-prompt">
+          <div className="do-exam__fullscreen-prompt-inner">
+            <p className="do-exam__fullscreen-prompt-text">
+              Trình duyệt chỉ cho phép bật toàn màn hình sau khi bạn nhấn nút. Vui
+              lòng bật để tiếp tục làm bài theo quy chế thi.
+            </p>
+            <Button
+              type="button"
+              onClick={() => void enableFullscreen({ warnOnFailure: true })}
+            >
+              Bật toàn màn hình
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {examBlocked && (
         <Card>
           <p className="error-text">
             {isOffline
-              ? "Mất kết nối mạng. Bài thi đang tạm dừng."
-              : "Bài thi đang tạm dừng sau khi reload."}
+              ? "Mất kết nối mạng. Phiên thi đang tạm dừng; khi có mạng hệ thống sẽ đồng bộ sự cố."
+              : reloadReporting
+                ? "Đang đồng bộ trạng thái sau khi tải lại trang…"
+                : serverWaitingAdmin
+                  ? "Phiên thi đang tạm dừng chờ quản trị viên xử lý sự cố (mạng / reload / …). Bạn không thể tự tiếp tục cho đến khi được phép."
+                  : "Bài thi đang tạm dừng."}
           </p>
-          <div className="do-exam__submit-wrap">
-            <Button
-              onClick={() => void handleResumeExam()}
-              disabled={isOffline}
-            >
-              Tiếp tục làm bài
-            </Button>
-          </div>
         </Card>
       )}
 
@@ -598,16 +875,13 @@ const DoExamPage = () => {
           </h1>
           <ExamTimer
             seconds={remainingTime}
+            paused={examBlocked}
             onTick={(next) => {
-              if (!isOffline && !isPaused) {
+              if (!examBlocked) {
                 dispatch(setRemainingTime(next));
               }
             }}
-            onExpire={() => {
-              if (!isOffline && !isPaused) {
-                void handleSubmit();
-              }
-            }}
+            onExpire={handleExamTimerExpire}
           />
         </div>
 
@@ -623,7 +897,7 @@ const DoExamPage = () => {
               <Button
                 variant="outline"
                 iconLeft={<IoArrowBackOutline />}
-                disabled={currentQuestion === 0 || isOffline || isPaused}
+                disabled={currentQuestion === 0 || examBlocked}
                 onClick={() =>
                   dispatch(setCurrentQuestion(currentQuestion - 1))
                 }
@@ -637,8 +911,7 @@ const DoExamPage = () => {
                 iconRight={<IoArrowForwardOutline />}
                 disabled={
                   currentQuestion === orderedQuestions.length - 1 ||
-                  isOffline ||
-                  isPaused
+                  examBlocked
                 }
                 onClick={() =>
                   dispatch(setCurrentQuestion(currentQuestion + 1))
@@ -659,7 +932,7 @@ const DoExamPage = () => {
           current={currentQuestion}
           answeredMap={answeredMap}
           onSelect={(idx) => {
-            if (isOffline || isPaused) {
+            if (examBlocked) {
               return;
             }
             dispatch(setCurrentQuestion(idx));
@@ -684,7 +957,7 @@ const DoExamPage = () => {
             <Button
               fullWidth
               iconLeft={<IoCheckmarkCircleOutline />}
-              disabled={isSubmitting || isOffline || isPaused}
+              disabled={isSubmitting || examBlocked}
               onClick={handleManualSubmit}
             >
               {isSubmitting ? "Đang nộp..." : "Nộp bài"}
