@@ -251,6 +251,7 @@
     &__question-form {
         display: grid;
         gap: 0.95rem;
+        min-width: 0;
     }
 
     &__question-options {
@@ -276,6 +277,11 @@
         grid-template-columns: 78px 1fr auto;
         gap: 0.5rem;
         align-items: center;
+        min-width: 0;
+
+        > *:nth-child(2) {
+            min-width: 0;
+        }
 
         @media (max-width: 640px) {
             grid-template-columns: 1fr;
@@ -592,6 +598,7 @@
     &__form {
         display: grid;
         gap: 0.85rem;
+        min-width: 0;
     }
 
     &__grid {
@@ -627,6 +634,11 @@
         grid-template-columns: 78px 1fr auto;
         gap: 0.5rem;
         align-items: center;
+        min-width: 0;
+
+        > *:nth-child(2) {
+            min-width: 0;
+        }
 
         @media (max-width: 640px) {
             grid-template-columns: 1fr;

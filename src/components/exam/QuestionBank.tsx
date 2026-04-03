@@ -12,6 +12,7 @@ import {
 import type { Question } from "../../types/question";
 import Badge from "../ui/Badge";
 import { getDifficultyLabel, getQuestionTypeLabel } from "../../utils/examUi";
+import KaTeXRenderer from "../math/KaTeXRenderer";
 
 interface QuestionBankProps {
   leftTitle?: string;
@@ -97,7 +98,12 @@ const QuestionBank = ({
                         <IoDocumentTextOutline className="question-bank__item-icon" />
                         <div>
                           <h5 className="question-bank__item-title">
-                            {question.content}
+                            {/* Render nội dung câu hỏi (có thể chứa công thức) bằng KaTeX */}
+                            <KaTeXRenderer
+                              latex={question.content}
+                              displayMode={false}
+                              as="span"
+                            />
                           </h5>
                           <div className="question-bank__item-badges">
                             <Badge
@@ -161,7 +167,12 @@ const QuestionBank = ({
                           Câu {index + 1}
                         </span>
                         <h5 className="question-bank__item-title">
-                          {question.content}
+                          {/* Render nội dung câu hỏi (có thể chứa công thức) bằng KaTeX */}
+                          <KaTeXRenderer
+                            latex={question.content}
+                            displayMode={false}
+                            as="span"
+                          />
                         </h5>
                       </div>
                       <IoArrowForward className="question-bank__cta question-bank__cta--reverse" />

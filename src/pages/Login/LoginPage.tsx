@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { IoEyeOffOutline, IoEyeOutline } from "react-icons/io5";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Button from "../../components/ui/Button";
@@ -15,6 +16,8 @@ const LoginPage = () => {
 
   const [usernameOrEmail, setUsernameOrEmail] = useState("");
   const [password, setPassword] = useState("");
+  // Bật/tắt hiển thị ký tự mật khẩu (type text ↔ password)
+  const [showPassword, setShowPassword] = useState(false);
 
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
 
@@ -51,14 +54,27 @@ const LoginPage = () => {
           required
         />
 
-        <label htmlFor="password">Password</label>
-        <input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          required
-        />
+        <label htmlFor="password">Mật khẩu</label>
+        <div className="login-card__password-field">
+          <input
+            id="password"
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            autoComplete="current-password"
+            required
+          />
+          <button
+            type="button"
+            className="login-card__toggle-password"
+            onClick={() => setShowPassword((prev) => !prev)}
+            aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+            aria-pressed={showPassword}
+            tabIndex={0}
+          >
+            {showPassword ? <IoEyeOffOutline size={22} /> : <IoEyeOutline size={22} />}
+          </button>
+        </div>
 
         <Button type="submit" fullWidth disabled={loading}>
           {loading ? "Đang đăng nhập..." : "Đăng nhập"}

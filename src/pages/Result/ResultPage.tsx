@@ -14,6 +14,7 @@ import LoadingSpinner from "../../components/common/LoadingSpinner";
 import { examSessionService } from "../../api/services/examSessionService";
 import type { ExamSessionReviewResult } from "../../types/examSession";
 import type { ResultSummaryView } from "../../types/result";
+import KaTeXRenderer from "../../components/math/KaTeXRenderer";
 
 const ResultPage = () => {
   const { id } = useParams();
@@ -185,7 +186,13 @@ const ResultPage = () => {
                 <div key={question.questionId} className="review-card">
                   <div className="review-card__header">
                     <p className="review-card__question">
-                      {index + 1}. {question.content}
+                      {index + 1}.{" "}
+                      {/* Render nội dung câu hỏi (có thể chứa công thức) bằng KaTeX */}
+                      <KaTeXRenderer
+                        latex={question.content}
+                        displayMode={false}
+                        as="span"
+                      />
                     </p>
                     <div
                       className={`review-card__verdict ${question.isCorrect ? "review-card__verdict--correct" : "review-card__verdict--wrong"}`}
@@ -224,7 +231,12 @@ const ResultPage = () => {
                         return (
                           <div key={option.id} className={classes.join(" ")}>
                             <span className="review-option__label">
-                              {option.content}
+                              {/* Render nội dung đáp án bằng KaTeX */}
+                              <KaTeXRenderer
+                                latex={option.content}
+                                displayMode={false}
+                                as="span"
+                              />
                             </span>
                             <span className="review-option__meta">
                               {option.isSelected ? "Bạn chọn" : ""}
@@ -251,7 +263,12 @@ const ResultPage = () => {
 
                   {question.explanation && (
                     <div className="review-card__explanation">
-                      {question.explanation}
+                      {/* Render giải thích bằng KaTeX */}
+                      <KaTeXRenderer
+                        latex={question.explanation}
+                        displayMode={false}
+                        as="span"
+                      />
                     </div>
                   )}
                 </div>

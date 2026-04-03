@@ -6,8 +6,17 @@ import {
 } from '@microsoft/signalr'
 import { storage } from '../../utils/storage'
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5082'
-const HUB_URL = `${BASE_URL}/hubs/exam-monitoring`
+// VITE_API_BASE_URL thường là .../api/v1 (cho axios); SignalR hub map ở root host (/hubs/...), không nằm dưới /api/v1
+const getApiOrigin = (): string => {
+    const raw = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5082'
+    try {
+        return new URL(raw).origin
+    } catch {
+        return 'http://localhost:5082'
+    }
+}
+
+const HUB_URL = `${getApiOrigin()}/hubs/exam-monitoring`
 
 export interface StudentProgressEvent {
     sessionId: string

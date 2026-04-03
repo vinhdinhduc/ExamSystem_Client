@@ -1,0 +1,60 @@
+@use "../variables" as *;
+
+// MathLive layout cho đồng bộ UI với hệ thống
+
+// Font chữ chế độ text + layout (mọi math-field editor trong app)
+math-field.mathlive-editor {
+    --text-font-family: #{$font-body};
+    max-width: 100%;
+    box-sizing: border-box;
+    font-family: #{$font-body};
+    width: 100%;
+    min-height: 44px;
+    display: block;
+}
+
+// Ẩn nút bàn phím ảo (chỉ dùng bàn phím vật lý)
+math-field.mathlive-editor::part(virtual-keyboard-toggle) {
+    display: none !important;
+}
+
+// Vùng soạn thảo: font UI cho text mode
+math-field.mathlive-editor::part(content) {
+    font-family: #{$font-body};
+}
+
+// Override font của KaTeX để đồng bộ với font UI gốc
+// Lý do: KaTeX default dùng font riêng (KaTeX_Main/KaTeX_Math) làm thay đổi cảm giác chữ trên trang câu hỏi.
+// Yêu cầu: giữ font như hệ thống (inherit từ `body`/heading), chỉ thay đổi diện render công thức.
+.question-card .katex,
+.question-preview .katex,
+.question-bank .katex,
+.do-exam .katex,
+.review-card .katex,
+.exam-builder .katex,
+.exam-preview .katex {
+  font-family: inherit !important;
+}
+
+.question-card .katex *,
+.question-preview .katex *,
+.question-bank .katex *,
+.do-exam .katex *,
+.review-card .katex *,
+.exam-builder .katex *,
+.exam-preview .katex *,
+.question-management-page .katex *,
+.question-management-page .katex * {
+  font-family: "Manrope", "Segoe UI", sans-serif !important;
+  font-style: normal !important;
+  font-size: inherit !important;
+}
+
+// Override trực tiếp cho trang quản lý câu hỏi (để khớp font “lúc đầu”)
+.question-management-page .katex {
+  // Ép font UI chuẩn để không còn lệch do KaTeX dùng font riêng
+  font-family: "Manrope", "Segoe UI", sans-serif !important;
+  font-style: normal !important;
+  font-size: inherit !important;
+}
+

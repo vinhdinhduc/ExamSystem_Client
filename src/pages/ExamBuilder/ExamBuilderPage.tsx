@@ -19,6 +19,9 @@ import Modal from "../../components/ui/Modal";
 import SubjectSelect from "../../components/common/SubjectSelect";
 import QuestionBank from "../../components/exam/QuestionBank";
 import QuestionPreview from "../../components/exam/QuestionPreview";
+import KaTeXRenderer from "../../components/math/KaTeXRenderer";
+import MathLiveEditor from "../../components/math/MathLiveEditor";
+import MathLiveFormInput from "../../components/math/MathLiveFormInput";
 import { useAppDispatch, useAppSelector } from "../../hooks/reduxHooks";
 import {
   createExam,
@@ -107,20 +110,28 @@ const DraftQuestionPreview = ({
         <Badge label={`${question.score} điểm`} variant="default" />
       </div>
     </div>
-    <p className="exam-builder__draft-item-content">{question.content}</p>
+    {/* Hiển thị LaTeX bằng KaTeX để xem trước công thức chuẩn */}
+    <p className="exam-builder__draft-item-content">
+      <KaTeXRenderer latex={question.content} displayMode={false} as="span" />
+    </p>
     <ul className="exam-builder__draft-item-options">
       {question.options.map((opt, oi) => (
         <li
           key={oi}
           className={`exam-builder__draft-item-option ${opt.isCorrect ? "exam-builder__draft-item-option--correct" : ""}`}
         >
-          {opt.isCorrect ? "✓" : "○"} {opt.content}
+          {opt.isCorrect ? "✓" : "○"}{" "}
+          <KaTeXRenderer latex={opt.content} displayMode={false} as="span" />
         </li>
       ))}
     </ul>
     {question.explanation && (
       <p className="exam-builder__draft-item-explanation">
-        {question.explanation}
+        <KaTeXRenderer
+          latex={question.explanation}
+          displayMode={false}
+          as="span"
+        />
       </p>
     )}
   </article>
@@ -200,6 +211,12 @@ const ExamBuilderPage = () => {
   const questionDifficulty = useWatch({
     control: questionControl,
     name: "difficultyLevel",
+  });
+
+  // Theo dõi giá trị LaTeX để đồng bộ với MathLive
+  const questionContentLatex = useWatch({
+    control: questionControl,
+    name: "content",
   });
 
   useEffect(() => {
@@ -1232,13 +1249,13 @@ const ExamBuilderPage = () => {
           className="exam-builder__question-form"
           onSubmit={(event) => void onCreateQuestion(event)}
         >
-          <FormInput
+          <MathLiveFormInput
             label="Nội dung câu hỏi"
-            multiline
             placeholder="Nhập câu hỏi..."
             registration={questionRegister("content", {
               required: "Nội dung câu hỏi là bắt buộc",
             })}
+            value={questionContentLatex ?? ""}
           />
 
           <div className="exam-builder__grid">
@@ -1269,12 +1286,18 @@ const ExamBuilderPage = () => {
             </label>
           </div>
 
-          <FormInput
-            label="Giải thích đáp án (tuỳ chọn)"
-            multiline
-            placeholder="Giải thích ngắn gọn vì sao đáp án đúng"
-            registration={questionRegister("explanation")}
-          />
+          <label className="ui-form-field">
+            <span className="ui-form-field__label">
+              Giải thích đáp án (tuỳ chọn)
+            </span>
+            {/* Textarea: nhập dài, wrap tự nhiên; font đồng bộ với hệ thống */}
+            <textarea
+              className="ui-form-field__control"
+              rows={4}
+              placeholder="Giải thích ngắn gọn vì sao đáp án đúng"
+              {...questionRegister("explanation")}
+            />
+          </label>
 
           <div className="exam-builder__question-options">
             <div className="exam-builder__question-options-head">
@@ -1307,15 +1330,23 @@ const ExamBuilderPage = () => {
                     >
                       {checked ? "Đúng" : "Sai"}
                     </button>
-                    <input
-                      className="ui-form-field__control"
-                      value={option}
-                      readOnly={questionType === 2}
-                      onChange={(event) =>
-                        updateOptionDraft(index, event.target.value)
-                      }
-                      placeholder={`Đáp án ${index + 1}`}
-                    />
+                    {questionType === 2 ? (
+                      <input
+                        className="ui-form-field__control"
+                        value={option}
+                        readOnly
+                        placeholder={`Đáp án ${index + 1}`}
+                      />
+                    ) : (
+                      <MathLiveEditor
+                        value={option}
+                        onChange={(nextLatex) =>
+                          updateOptionDraft(index, nextLatex)
+                        }
+                        placeholder={`Đáp án ${index + 1}`}
+                        className="mathlive-editor"
+                      />
+                    )}
                     {questionType !== 2 && optionDrafts.length > 2 && (
                       <Button
                         type="button"
@@ -1655,18 +1686,21 @@ const ExamBuilderPage = () => {
                       </Button>
                     </div>
 
-                    <FormInput
-                      label="Nội dung câu hỏi"
-                      multiline
-                      value={question.content}
-                      onChange={(event: { target: { value: string } }) => {
-                        const nextValue = event.target.value;
-                        updateDraftQuestion(questionIndex, (current) => ({
-                          ...current,
-                          content: nextValue,
-                        }));
-                      }}
-                    />
+                    <label className="ui-form-field">
+                      <span className="ui-form-field__label">Nội dung câu hỏi</span>
+                      {/* Nhập LaTeX bằng MathLive cho đúng yêu cầu admin */}
+                      <MathLiveEditor
+                        value={question.content}
+                        onChange={(nextLatex) => {
+                          updateDraftQuestion(questionIndex, (current) => ({
+                            ...current,
+                            content: nextLatex,
+                          }));
+                        }}
+                        placeholder="Nhập nội dung câu hỏi..."
+                        className="mathlive-editor"
+                      />
+                    </label>
 
                     <div className="exam-builder__grid">
                       <label className="ui-form-field">
@@ -1730,25 +1764,30 @@ const ExamBuilderPage = () => {
                           >
                             {option.isCorrect ? "Đúng" : "Sai"}
                           </button>
-                          <input
-                            className="ui-form-field__control"
-                            value={option.content}
-                            readOnly={question.questionType === 2}
-                            onChange={(event: unknown) => {
-                              const nextValue = (
-                                event as ChangeEvent<HTMLInputElement>
-                              ).target.value;
-                              updateDraftQuestion(questionIndex, (current) => ({
-                                ...current,
-                                options: current.options.map((item, index) =>
-                                  index === optionIndex
-                                    ? { ...item, content: nextValue }
-                                    : item,
-                                ),
-                              }));
-                            }}
-                            placeholder={`Đáp án ${optionIndex + 1}`}
-                          />
+                          {question.questionType === 2 ? (
+                            <input
+                              className="ui-form-field__control"
+                              value={option.content}
+                              readOnly
+                              placeholder={`Đáp án ${optionIndex + 1}`}
+                            />
+                          ) : (
+                            <MathLiveEditor
+                              value={option.content}
+                              onChange={(nextLatex) => {
+                                updateDraftQuestion(questionIndex, (current) => ({
+                                  ...current,
+                                  options: current.options.map((item, index) =>
+                                    index === optionIndex
+                                      ? { ...item, content: nextLatex }
+                                      : item,
+                                  ),
+                                }));
+                              }}
+                              placeholder={`Đáp án ${optionIndex + 1}`}
+                              className="mathlive-editor"
+                            />
+                          )}
                           {question.questionType !== 2 &&
                             question.options.length > 2 && (
                               <Button

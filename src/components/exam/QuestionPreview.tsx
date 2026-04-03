@@ -6,6 +6,7 @@ import {
   getQuestionOptions,
   getQuestionTypeLabel,
 } from "../../utils/examUi";
+import KaTeXRenderer from "../math/KaTeXRenderer";
 
 interface QuestionPreviewProps {
   question: Question;
@@ -14,8 +15,6 @@ interface QuestionPreviewProps {
 
 const QuestionPreview = ({ question, index }: QuestionPreviewProps) => {
   const options = getQuestionOptions(question);
-  console.log("Check option", options);
-  console.log("Question", question);
 
   return (
     <article className="question-preview">
@@ -30,28 +29,45 @@ const QuestionPreview = ({ question, index }: QuestionPreviewProps) => {
         />
       </div>
       <h4 className="question-preview__title">
-        {index + 1}. {question.content}
+        {index + 1}.{" "}
+        {/* Render LaTeX bằng KaTeX để hiển thị công thức chuẩn */}
+        <KaTeXRenderer latex={question.content} displayMode={false} as="span" />
       </h4>
       <ul className="question-preview__options">
-        {options.map((option) => (
-          <li
-            key={option.id}
-            className={`question-preview__option ${option.isCorrect ? "question-preview__option--correct" : ""}`.trim()}
-          >
-            {option.content}
-            {option.isCorrect ? (
-              <span
-                className="question-preview__option-icon"
-                aria-label="Đáp án đúng"
-              >
-                <IoCheckmarkCircle />
-              </span>
-            ) : null}
+        {options.length === 0 ? (
+          <li className="question-preview__option question-preview__option--empty">
+            {/* Trường hợp API chưa trả đáp án hoặc câu hỏi chưa có lựa chọn */}
+            Chưa có đáp án
           </li>
-        ))}
+        ) : (
+          options.map((option, optionIndex) => (
+            <li
+              key={option.id ?? `opt-${optionIndex}`}
+              className={`question-preview__option ${option.isCorrect ? "question-preview__option--correct" : ""}`.trim()}
+            >
+              {/* Render nội dung đáp án (có thể chứa công thức) bằng KaTeX */}
+              <KaTeXRenderer
+                latex={option.content}
+                displayMode={false}
+                as="span"
+              />
+              {option.isCorrect ? (
+                <span
+                  className="question-preview__option-icon"
+                  aria-label="Đáp án đúng"
+                >
+                  <IoCheckmarkCircle />
+                </span>
+              ) : null}
+            </li>
+          ))
+        )}
       </ul>
       {question.explanation ? (
-        <p className="question-preview__explanation">{question.explanation}</p>
+        <p className="question-preview__explanation">
+          {/* Render giải thích bằng KaTeX để hiển thị công thức chuẩn */}
+          <KaTeXRenderer latex={question.explanation} displayMode={false} as="span" />
+        </p>
       ) : null}
     </article>
   );

@@ -7,7 +7,6 @@ import { subjectService } from "../../api/services/subjectService";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import ConfirmModal from "../../components/ui/ConfirmModal";
-import FormInput from "../../components/ui/FormInput";
 import Modal from "../../components/ui/Modal";
 import Table from "../../components/ui/Table";
 import { useAppSelector } from "../../hooks/reduxHooks";
@@ -15,6 +14,9 @@ import type { RootState } from "../../redux/store";
 import type { Question, QuestionCreatePayload } from "../../types/question";
 import type { Subject } from "../../types/subject";
 import { getDifficultyLabel, getQuestionTypeLabel } from "../../utils/examUi";
+import KaTeXRenderer from "../../components/math/KaTeXRenderer";
+import MathLiveEditor from "../../components/math/MathLiveEditor";
+import MathLiveFormInput from "../../components/math/MathLiveFormInput";
 
 interface QuestionFormValues {
   subjectId: number;
@@ -69,6 +71,7 @@ const QuestionManagementPage = () => {
   } = useForm<QuestionFormValues>({ defaultValues });
 
   const questionType = watch("questionType");
+  const contentLatex = watch("content");
 
   const loadSubjects = async () => {
     try {
@@ -336,7 +339,10 @@ const QuestionManagementPage = () => {
               title: "Câu hỏi",
               render: (row) => (
                 <div className="question-management-page__content-cell">
-                  <strong>{row.content}</strong>
+                  <strong>
+                    {/* Render nội dung câu hỏi (có thể chứa công thức) bằng KaTeX */}
+                    <KaTeXRenderer latex={row.content} displayMode={false} as="span" />
+                  </strong>
                   <p>
                     {getQuestionTypeLabel(row.questionType)} •{" "}
                     {getDifficultyLabel(row.difficultyLevel)}
@@ -421,10 +427,11 @@ const QuestionManagementPage = () => {
             ) : null}
           </label>
 
-          <FormInput
+          <MathLiveFormInput
             label="Nội dung câu hỏi"
-            multiline
             registration={register("content", { required: true })}
+            value={contentLatex ?? ""}
+            placeholder="Nhập nội dung câu hỏi..."
             error={errors.content}
           />
 
@@ -454,11 +461,16 @@ const QuestionManagementPage = () => {
             </label>
           </div>
 
-          <FormInput
-            label="Giải thích đáp án"
-            multiline
-            registration={register("explanation")}
-          />
+          <label className="ui-form-field">
+            <span className="ui-form-field__label">Giải thích đáp án</span>
+            {/* Textarea: nhiều dòng, font inherit như form; tránh cuộn ngang của một dòng */}
+            <textarea
+              className="ui-form-field__control"
+              rows={4}
+              placeholder="Giải thích đáp án (tuỳ chọn)"
+              {...register("explanation")}
+            />
+          </label>
 
           <div className="question-management-page__options">
             <div className="question-management-page__options-head">
@@ -484,21 +496,28 @@ const QuestionManagementPage = () => {
                 >
                   {option.isCorrect ? "Đúng" : "Sai"}
                 </button>
-                <input
-                  className="ui-form-field__control"
-                  readOnly={questionType === 2}
-                  value={option.content}
-                  onChange={(event) =>
-                    setOptions((prev) =>
-                      prev.map((item, itemIndex) =>
-                        itemIndex === index
-                          ? { ...item, content: event.target.value }
-                          : item,
-                      ),
-                    )
-                  }
-                  placeholder={`Đáp án ${index + 1}`}
-                />
+                {questionType === 2 ? (
+                  <input
+                    className="ui-form-field__control"
+                    readOnly
+                    value={option.content}
+                    placeholder={`Đáp án ${index + 1}`}
+                  />
+                ) : (
+                  <MathLiveEditor
+                    value={option.content}
+                    onChange={(nextLatex) =>
+                      setOptions((prev) =>
+                        prev.map((item, itemIndex) =>
+                          itemIndex === index
+                            ? { ...item, content: nextLatex }
+                            : item,
+                        ),
+                      )
+                    }
+                    placeholder={`Đáp án ${index + 1}`}
+                  />
+                )}
                 {questionType !== 2 && options.length > 2 && (
                   <Button
                     type="button"

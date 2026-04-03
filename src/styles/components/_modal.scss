@@ -42,6 +42,9 @@
         &--lg {
             max-width: 720px;
         }
+
+        // Tránh thanh cuộn ngang khi nội dung dài (textarea/MathLive đã wrap trong form)
+        overflow-x: hidden;
     }
 
     &__header {
@@ -95,6 +98,7 @@
     &__body {
         padding: 1.15rem 1.2rem 1.3rem;
         flex: 1;
+        min-width: 0;
     }
 }
 

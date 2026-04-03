@@ -5,6 +5,7 @@ import {
   getQuestionOptions,
   getQuestionTypeLabel,
 } from "../../utils/examUi";
+import KaTeXRenderer from "../math/KaTeXRenderer";
 
 interface QuestionCardProps {
   question: Question;
@@ -30,7 +31,9 @@ const QuestionCard = ({ question, index, value, onChange }: QuestionCardProps) =
         />
       </div>
       <h3 className="question-card__title">
-        <span className="question-card__index">Câu {index}:</span> {question.content}
+        <span className="question-card__index">Câu {index}:</span>{" "}
+        {/* Render LaTeX bằng KaTeX để hiển thị công thức chuẩn */}
+        <KaTeXRenderer latex={question.content} displayMode={false} as="span" />
       </h3>
       <div className="question-card__answers">
         {options.map((option) => {
@@ -54,7 +57,12 @@ const QuestionCard = ({ question, index, value, onChange }: QuestionCardProps) =
                 }}
               />
               <span className="question-card__answer-text">
-                {option.content}
+                {/* Render nội dung đáp án (có thể chứa công thức) bằng KaTeX */}
+                <KaTeXRenderer
+                  latex={option.content}
+                  displayMode={false}
+                  as="span"
+                />
               </span>
             </label>
           );
